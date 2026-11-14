@@ -301,6 +301,92 @@
       .btn:disabled { opacity: 0.45; cursor: default; }
       .btn:disabled:active { transform: none; }
 
+      /* ---------- pilihan level di layar utama ---------- */
+      .diff-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 8px 10px;
+      }
+      .diff-label {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--soft);
+        white-space: nowrap;
+      }
+      .diff-seg { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+      .diff-seg button {
+        flex: 1 1 auto;
+        min-height: 42px;
+        padding: 7px 8px;
+        border-radius: 10px;
+        border: 1.5px solid var(--line);
+        background: transparent;
+        font-weight: 700;
+        font-size: 13.5px;
+        cursor: pointer;
+      }
+      .diff-seg button[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: var(--chip);
+        box-shadow: inset 0 0 0 1.5px var(--accent);
+      }
+
+      /* ---------- peta petualangan ---------- */
+      .adv-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 14px;
+      }
+      .adv-card h2 {
+        margin: 0 0 2px;
+        font-size: 14px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .adv-progress { margin: 0 0 10px; font-size: 13.5px; color: var(--soft); font-weight: 600; }
+      .adv-progress strong { color: var(--accent); }
+      .stage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .stage-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+        min-height: 64px;
+        padding: 9px 11px;
+        border-radius: 12px;
+        border: 1.5px solid var(--line);
+        background: transparent;
+        cursor: pointer;
+        text-align: left;
+      }
+      .stage-btn .stage-no { font-weight: 800; font-size: 15px; }
+      .stage-btn .stage-meta { font-size: 12.5px; color: var(--soft); font-weight: 600; }
+      .stage-btn .stage-badge { font-size: 12px; font-weight: 800; margin-top: 3px; color: var(--accent); }
+      .stage-btn.is-done { border-color: var(--accent); background: var(--chip); }
+      .stage-btn.is-done .stage-badge { color: var(--accent); }
+      .stage-btn.is-open .stage-badge { color: var(--gold); }
+      .stage-btn.is-playing { box-shadow: inset 0 0 0 2px var(--gold); }
+      .stage-btn:disabled { opacity: 0.45; cursor: default; }
+      .stage-btn:disabled .stage-badge { color: var(--soft); }
+      .adv-champ {
+        margin: 10px 0 0;
+        padding: 9px 11px;
+        border-radius: 10px;
+        background: var(--chip);
+        border: 1px solid var(--gold);
+        font-weight: 700;
+        font-size: 14px;
+        text-align: center;
+      }
+
       /* ---------- move list ---------- */
       .moves-card {
         background: var(--panel);
@@ -562,6 +648,23 @@
 
       <p class="status" id="status" role="status" aria-live="polite">Giliran Putih</p>
 
+      <div class="diff-bar" id="diffBar">
+        <span class="diff-label">Level Bot</span>
+        <div class="diff-seg" id="diffSeg" role="group" aria-label="Pilih level bot: mudah atau susah">
+          <button type="button" data-v="easy" aria-pressed="false">Easy · Mudah</button>
+          <button type="button" data-v="normal" aria-pressed="true">Normal</button>
+          <button type="button" data-v="hard" aria-pressed="false">Hard · Susah</button>
+          <button type="button" data-v="grandmaster" aria-pressed="false">Grandmaster</button>
+        </div>
+      </div>
+
+      <section class="adv-card hidden" id="advPanel">
+        <h2>Peta Petualangan</h2>
+        <p class="adv-progress" id="advProgressText"></p>
+        <div class="stage-grid" id="advStagesMain"></div>
+        <p class="adv-champ hidden" id="advChamp">Juara Petualangan — semua 8 stage sudah ditamatkan!</p>
+      </section>
+
       <div class="wifi-bar hidden" id="wifiBar">
         <span class="wifi-dot" id="wifiDot"></span>
         <span id="wifiBarText">Belum terhubung</span>
@@ -593,10 +696,17 @@
         <div class="field">
           <span>Mode</span>
           <div class="seg" id="segMode">
-            <button type="button" data-v="solo" aria-pressed="true">Lawan Bot<small>Main sendiri melawan mesin</small></button>
+            <button type="button" data-v="solo" aria-pressed="true">Lawan Bot<small>Main sendiri melawan mesin — bebas pilih level</small></button>
+            <button type="button" data-v="adv" aria-pressed="false">Petualangan<small>8 stage bertingkat, mudah ke susah — menang untuk membuka stage berikutnya</small></button>
             <button type="button" data-v="2p" aria-pressed="false">2 Pemain<small>Pass-and-play, gantian di 1 HP</small></button>
             <button type="button" data-v="wifi" aria-pressed="false">Main Berdua (Wi-Fi / Hotspot)<small>2 HP berbeda — sambung lewat pindai QR, tanpa internet</small></button>
           </div>
+        </div>
+
+        <div class="field hidden" id="fieldAdv">
+          <span>Peta Stage Petualangan</span>
+          <div class="stage-grid" id="advStagesSetup"></div>
+          <p class="field-note">Stage ganjil kamu pegang Putih, stage genap pegang Hitam. Menang membuka stage berikutnya; progres tersimpan di HP ini. Ketuk “Mulai Main” untuk lanjut dari stage yang sedang terbuka, atau ketuk stage yang sudah terbuka untuk memainkannya.</p>
         </div>
 
         <div class="field" id="fieldLevel">
@@ -1134,8 +1244,29 @@ const PIECE_ID = { 1: "Pion", 2: "Kuda", 3: "Gajah", 4: "Benteng", 5: "Menteri",
 const COLOR_ID = { 1: "Putih", "-1": "Hitam" };
 const START_COUNT = { 1: 8, 2: 2, 3: 2, 4: 2, 5: 1 };
 
+/* ---------- mode Petualangan ---------- */
+const ADV_STAGES = [
+  { level: "easy" }, { level: "easy" },
+  { level: "normal" }, { level: "normal" },
+  { level: "hard" }, { level: "hard" },
+  { level: "grandmaster" }, { level: "grandmaster" }
+];
+const ADV_KEY = "lojiChessAdvProgress";
+let advStage = 1;               // stage yang sedang dimainkan (1-8)
+let advStageWon = false;        // stage aktif baru saja dimenangkan
+let advProgress = (function loadAdv() {
+  try {
+    const v = parseInt(localStorage.getItem(ADV_KEY) || "0", 10);
+    return isNaN(v) ? 0 : Math.min(8, Math.max(0, v));
+  } catch (e) { return 0; }
+})();
+function saveAdv() {
+  try { localStorage.setItem(ADV_KEY, String(advProgress)); } catch (e) { /* penyimpanan tidak tersedia */ }
+}
+function advStageColor(n) { return n % 2 === 1 ? 1 : -1; } // ganjil Putih, genap Hitam
+
 let board = new Board();
-let mode = "solo";              // 'solo' | '2p' | 'wifi'
+let mode = "solo";              // 'solo' | 'adv' | '2p' | 'wifi'
 let wifiRole = "host";          // 'host' (Putih) | 'guest' (Hitam)
 let myColor = 1;                // warna pemain di HP ini pada mode wifi
 let wifiConnected = false;
@@ -1281,9 +1412,10 @@ function newGame() {
   thinking = false; gameOver = false;
   resultTitle = ""; resultSub = "";
   drawOfferBy = 0; flashMsg = ""; lastMove = null; endDismissed = false;
+  advStageWon = false;
   el("promoSheet").classList.add("hidden");
   el("endSheet").classList.add("hidden");
-  orientation = mode === "solo" ? humanColor : mode === "wifi" ? myColor : 1;
+  orientation = (mode === "solo" || mode === "adv") ? humanColor : mode === "wifi" ? myColor : 1;
   legalCache = legalMoves(board);
   render();
   maybeBot();
@@ -1296,6 +1428,17 @@ function checkEnd(legal) {
       const winner = -board.t;
       resultTitle = "Skakmat!";
       resultSub = COLOR_ID[winner] + " menang. Permainan yang bagus!";
+      if (mode === "adv" && winner === humanColor) {
+        advStageWon = true;
+        if (advStage > advProgress) { advProgress = advStage; saveAdv(); }
+        if (advStage >= ADV_STAGES.length) {
+          resultTitle = "Juara Petualangan!";
+          resultSub = "Kamu menamatkan Stage 8 — seluruh Petualangan selesai. Selamat, kamu Juara Petualangan Loji Chess!";
+        } else {
+          resultTitle = "Stage " + advStage + " Tuntas!";
+          resultSub = "Kamu menang sebagai " + COLOR_ID[humanColor] + " melawan Bot " + LEVELS[levelKey].name + ". Stage " + (advStage + 1) + " sekarang terbuka.";
+        }
+      }
     } else {
       resultTitle = "Remis";
       resultSub = "Pat — " + COLOR_ID[board.t] + " tidak punya langkah legal.";
@@ -1348,14 +1491,14 @@ function undoMove() {
   if (mode === "wifi") return; // langkah yang sudah terkirim ke HP lawan tidak bisa diurungkan sepihak
   if (thinking || history.length === 0) return;
   popOne();
-  if (mode === "solo" && board.t !== humanColor && history.length > 0) popOne();
+  if ((mode === "solo" || mode === "adv") && board.t !== humanColor && history.length > 0) popOne();
   gameOver = false; resultTitle = ""; resultSub = "";
   el("endSheet").classList.add("hidden");
   drawOfferBy = 0; flashMsg = ""; selected = -1; targets = new Map();
   lastMove = history.length ? { f: history[history.length - 1] & 127, t: (history[history.length - 1] >> 7) & 127 } : null;
   legalCache = legalMoves(board);
   if (mode === "2p" && autoFlip) orientation = board.t;
-  if (mode === "solo") orientation = humanColor;
+  if (mode === "solo" || mode === "adv") orientation = humanColor;
   snd("select");
   render();
   maybeBot();
@@ -1375,13 +1518,13 @@ function botPick() {
   return mv;
 }
 function maybeBot() {
-  if (mode !== "solo" || gameOver || board.t === humanColor) return;
+  if ((mode !== "solo" && mode !== "adv") || gameOver || board.t === humanColor) return;
   thinking = true;
   render();
   const gid = gameId;
   setTimeout(() => {
     if (gid !== gameId) return; // game sudah diganti saat bot berpikir
-    if (mode !== "solo" || gameOver || board.t === humanColor) { thinking = false; render(); return; }
+    if ((mode !== "solo" && mode !== "adv") || gameOver || board.t === humanColor) { thinking = false; render(); return; }
     let mv = null;
     try { mv = botPick(); } catch (e) { mv = null; }
     thinking = false;
@@ -1462,7 +1605,7 @@ function playerName(color) {
   if (mode === "wifi") {
     return color === myColor ? "Kamu · " + COLOR_ID[color] : "Lawan · " + COLOR_ID[color];
   }
-  if (mode === "solo") {
+  if (mode === "solo" || mode === "adv") {
     return color === humanColor ? "Kamu · " + COLOR_ID[color] : "Bot " + LEVELS[levelKey].name + " · " + COLOR_ID[color];
   }
   return COLOR_ID[color];
@@ -1498,7 +1641,7 @@ function fmtAdv(diff) {
 function renderBar(color, els) {
   els.name.textContent = playerName(color);
   els.dot.classList.toggle("turn", !gameOver && board.t === color);
-  const isBotBar = mode === "solo" && color !== humanColor;
+  const isBotBar = (mode === "solo" || mode === "adv") && color !== humanColor;
   els.think.classList.toggle("hidden", !(thinking && isBotBar));
   const taken = capturedBy(color);
   els.caps.innerHTML = "";
@@ -1571,6 +1714,7 @@ function renderStatus() {
   } else {
     main = "Giliran " + COLOR_ID[board.t] + (inCheckNow() ? " — Skak!" : "");
     if (mode === "solo") sub = board.t === humanColor ? "Ketuk buahmu, lalu ketuk petak tujuan." : "";
+    else if (mode === "adv") sub = board.t === humanColor ? "Stage " + advStage + " · Bot " + LEVELS[levelKey].name + " — menang untuk membuka stage berikutnya." : "";
     else if (mode === "wifi") sub = board.t === myColor ? "Giliranmu — ketuk buahmu, lalu ketuk petak tujuan." : "Menunggu langkah lawan di HP-nya…";
     else sub = autoFlip ? "Serahkan HP ke pemain " + COLOR_ID[board.t] + "." : "Pass-and-play di satu HP.";
   }
@@ -1611,7 +1755,15 @@ function renderMoves() {
   }
   moveListEl.scrollTop = moveListEl.scrollHeight;
 }
+function syncDiffBar() {
+  const bar = el("diffBar");
+  bar.classList.toggle("hidden", mode !== "solo");
+  bar.querySelectorAll("button[data-v]").forEach(b => {
+    b.setAttribute("aria-pressed", String(b.dataset.v === levelKey));
+  });
+}
 function renderControls() {
+  syncDiffBar();
   el("btnUndo").disabled = thinking || history.length === 0 || mode === "wifi";
   el("btnResign").disabled = gameOver || thinking;
   const drawBtn = el("btnDraw");
@@ -1630,13 +1782,74 @@ function renderControls() {
     drawBtn.textContent = "Tawar Seri";
     drawBtn.classList.remove("offer-armed");
   }
-  el("modeChip").textContent = mode === "solo" ? "Lawan Bot · " + LEVELS[levelKey].name : mode === "wifi" ? "Berdua · Wi-Fi/Hotspot" : "2 Pemain · 1 HP";
+  el("modeChip").textContent = mode === "solo" ? "Lawan Bot · " + LEVELS[levelKey].name : mode === "adv" ? "Petualangan · Stage " + advStage : mode === "wifi" ? "Berdua · Wi-Fi/Hotspot" : "2 Pemain · 1 HP";
+  const againBtn = el("btnAgain");
+  if (mode === "adv" && gameOver) {
+    againBtn.textContent = advStageWon ? (advStage < ADV_STAGES.length ? "Stage Berikutnya" : "Main Lagi") : "Coba Lagi";
+  } else {
+    againBtn.textContent = "Main Lagi";
+  }
   if (gameOver && !endDismissed) {
     el("endTitle").textContent = resultTitle;
     el("endSub").textContent = resultSub;
     el("endSheet").classList.remove("hidden");
   }
 }
+/* ---------- peta stage petualangan ---------- */
+function buildStageButtons(container) {
+  container.innerHTML = "";
+  for (let n = 1; n <= ADV_STAGES.length; n++) {
+    const done = n <= advProgress;
+    const locked = n > advProgress + 1;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "stage-btn" + (done ? " is-done" : locked ? " is-locked" : " is-open")
+      + (mode === "adv" && n === advStage ? " is-playing" : "");
+    b.dataset.stage = String(n);
+    b.disabled = locked;
+    const no = document.createElement("span");
+    no.className = "stage-no";
+    no.textContent = "Stage " + n;
+    const meta = document.createElement("span");
+    meta.className = "stage-meta";
+    meta.textContent = LEVELS[ADV_STAGES[n - 1].level].name + " · Kamu " + COLOR_ID[advStageColor(n)];
+    const badge = document.createElement("span");
+    badge.className = "stage-badge";
+    badge.textContent = done ? "✓ Selesai" : locked ? "Terkunci" : "Terbuka — main";
+    b.appendChild(no); b.appendChild(meta); b.appendChild(badge);
+    container.appendChild(b);
+  }
+}
+function renderAdvPanel() {
+  const panel = el("advPanel");
+  panel.classList.toggle("hidden", mode !== "adv");
+  el("advProgressText").innerHTML = "";
+  el("advProgressText").appendChild(document.createTextNode("Progres: "));
+  const strong = document.createElement("strong");
+  strong.textContent = advProgress + " dari " + ADV_STAGES.length + " stage selesai";
+  el("advProgressText").appendChild(strong);
+  el("advProgressText").appendChild(document.createTextNode(" · Stage yang terkunci terbuka setelah stage sebelumnya dimenangkan."));
+  el("advChamp").classList.toggle("hidden", advProgress < ADV_STAGES.length);
+  buildStageButtons(el("advStagesMain"));
+  buildStageButtons(el("advStagesSetup"));
+}
+function startStage(n) {
+  if (n < 1 || n > ADV_STAGES.length || n > advProgress + 1) return; // stage terkunci tidak bisa dimainkan
+  mode = "adv";
+  advStage = n;
+  levelKey = ADV_STAGES[n - 1].level;
+  humanColor = advStageColor(n);
+  el("setupModal").classList.add("hidden");
+  newGame();
+}
+function onStageGridClick(ev) {
+  const b = ev.target.closest("button[data-stage]");
+  if (!b || b.disabled) return;
+  startStage(parseInt(b.dataset.stage, 10));
+}
+el("advStagesMain").addEventListener("click", onStageGridClick);
+el("advStagesSetup").addEventListener("click", onStageGridClick);
+
 function render() {
   renderBoard();
   renderBar(-orientation, { name: el("nameTop"), dot: el("dotTop"), think: el("thinkTop"), caps: el("capsTop"), adv: el("advTop") });
@@ -1644,6 +1857,7 @@ function render() {
   renderStatus();
   renderMoves();
   renderControls();
+  renderAdvPanel();
   updateWifiBar();
 }
 
@@ -1651,6 +1865,19 @@ boardEl.addEventListener("click", ev => {
   const cell = ev.target.closest(".sq");
   if (!cell) return;
   onSquare(parseInt(cell.dataset.sq, 10));
+});
+
+/* ---------- pilihan level di layar utama ---------- */
+el("diffSeg").addEventListener("click", ev => {
+  const b = ev.target.closest("button[data-v]");
+  if (!b) return;
+  if (b.dataset.v !== levelKey) {
+    levelKey = b.dataset.v;
+    setup.level = levelKey;
+    snd("select");
+    if (!thinking) maybeBot();
+  }
+  render();
 });
 
 /* ---------- tombol kontrol ---------- */
@@ -1745,6 +1972,11 @@ el("btnDraw").addEventListener("click", () => {
 });
 
 el("btnAgain").addEventListener("click", () => {
+  if (mode === "adv") {
+    if (advStageWon && advStage < ADV_STAGES.length) startStage(advStage + 1);
+    else startStage(advStage);
+    return;
+  }
   if (mode === "wifi") {
     if (pendingRematch) {
       pendingRematch = false;
@@ -1778,6 +2010,7 @@ function syncSetupUI() {
   mark("segLevel", setup.level);
   mark("segColor", setup.colorChoice);
   mark("segWifiRole", setup.wifiRole);
+  el("fieldAdv").classList.toggle("hidden", setup.mode !== "adv");
   el("fieldLevel").classList.toggle("hidden", setup.mode !== "solo");
   el("fieldColor").classList.toggle("hidden", setup.mode !== "solo");
   el("fieldFlip").classList.toggle("hidden", setup.mode !== "2p");
@@ -1826,6 +2059,10 @@ el("btnStart").addEventListener("click", () => {
   soundOn = setup.sound;
   humanColor = setup.colorChoice === 0 ? (Math.random() < 0.5 ? 1 : -1) : setup.colorChoice;
   el("setupModal").classList.add("hidden");
+  if (mode === "adv") {
+    startStage(Math.min(advProgress + 1, ADV_STAGES.length));
+    return;
+  }
   if (mode === "wifi") {
     const roleChanged = setup.wifiRole !== wifiRole;
     wifiRole = setup.wifiRole;
