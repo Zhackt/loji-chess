@@ -387,6 +387,48 @@
         text-align: center;
       }
 
+      /* ---------- menu multiplayer di layar utama ---------- */
+      .mp-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 14px;
+      }
+      .mp-card h2 {
+        margin: 0 0 2px;
+        font-size: 14px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .mp-desc { margin: 0 0 10px; font-size: 13.5px; color: var(--soft); font-weight: 600; }
+      .mp-grid { display: flex; flex-direction: column; gap: 8px; }
+      .mp-btn {
+        display: block;
+        width: 100%;
+        min-height: 52px;
+        padding: 9px 12px;
+        border-radius: 12px;
+        border: 1.5px solid var(--line);
+        background: transparent;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 15px;
+        text-align: left;
+      }
+      .mp-btn small { display: block; font-weight: 500; color: var(--soft); font-size: 12.5px; margin-top: 2px; }
+      .mp-btn:active { transform: translateY(1px); }
+      .mp-btn.is-active {
+        border-color: var(--accent);
+        background: var(--chip);
+        box-shadow: inset 0 0 0 1.5px var(--accent);
+      }
+      .mp-btn.is-active small { color: var(--ink); opacity: 0.75; }
+      .mp-row { display: flex; gap: 8px; }
+      .mp-row .mp-btn { flex: 1 1 0; }
+      .mp-hint { margin: 10px 0 0; font-size: 13.5px; font-weight: 600; }
+      .mp-steps { margin: 6px 0 0; font-size: 13px; color: var(--soft); line-height: 1.5; }
+
       /* ---------- move list ---------- */
       .moves-card {
         background: var(--panel);
@@ -663,6 +705,20 @@
         <p class="adv-progress" id="advProgressText"></p>
         <div class="stage-grid" id="advStagesMain"></div>
         <p class="adv-champ hidden" id="advChamp">Juara Petualangan — semua 8 stage sudah ditamatkan!</p>
+      </section>
+
+      <section class="mp-card" id="mpPanel">
+        <h2>Multiplayer — Main Bareng</h2>
+        <p class="mp-desc">Main berdua lawan teman — pilih caranya, langsung mulai dari sini.</p>
+        <div class="mp-grid">
+          <button type="button" class="mp-btn" id="btnMpLocal" aria-pressed="false">2 Pemain · 1 HP<small>Pass-and-play — gantian pegang HP ini, tanpa internet</small></button>
+          <div class="mp-row">
+            <button type="button" class="mp-btn" id="btnMpHost" aria-pressed="false">Tuan Rumah · 2 HP<small>Wi-Fi / Hotspot — kamu pegang Putih, buat QR undangan</small></button>
+            <button type="button" class="mp-btn" id="btnMpGuest" aria-pressed="false">Gabung · 2 HP<small>Wi-Fi / Hotspot — kamu pegang Hitam, pindai QR undangan</small></button>
+          </div>
+        </div>
+        <p class="mp-hint" id="mpHint"></p>
+        <p class="mp-steps">Cara main berdua beda HP: 1) Kedua HP sambung ke Wi-Fi atau hotspot yang sama. 2) Satu HP ketuk “Tuan Rumah”, lalu buat QR Undangan. 3) HP lawan ketuk “Gabung” dan pindai QR itu. 4) HP lawan menampilkan QR Jawaban — Tuan Rumah memindainya balik, dan permainan tersambung tanpa internet.</p>
       </section>
 
       <div class="wifi-bar hidden" id="wifiBar">
@@ -1850,6 +1906,68 @@ function onStageGridClick(ev) {
 el("advStagesMain").addEventListener("click", onStageGridClick);
 el("advStagesSetup").addEventListener("click", onStageGridClick);
 
+/* ---------- menu multiplayer di layar utama ---------- */
+function renderMpPanel() {
+  const local = el("btnMpLocal"), host = el("btnMpHost"), guest = el("btnMpGuest");
+  const isLocal = mode === "2p";
+  const isHost = mode === "wifi" && wifiRole === "host";
+  const isGuest = mode === "wifi" && wifiRole === "guest";
+  local.classList.toggle("is-active", isLocal);
+  host.classList.toggle("is-active", isHost);
+  guest.classList.toggle("is-active", isGuest);
+  local.setAttribute("aria-pressed", String(isLocal));
+  host.setAttribute("aria-pressed", String(isHost));
+  guest.setAttribute("aria-pressed", String(isGuest));
+  let txt;
+  if (isLocal) {
+    txt = "Sedang aktif: 2 Pemain di 1 HP — setelah jalan, serahkan HP ke lawanmu.";
+  } else if (mode === "wifi") {
+    txt = wifiConnected
+      ? "Sedang aktif & terhubung: main berdua beda HP — kamu pegang " + COLOR_ID[myColor] + "."
+      : "Mode Wi-Fi dipilih (" + (wifiRole === "host" ? "Tuan Rumah · Putih" : "Gabung · Hitam") + ") — belum terhubung. Selesaikan sambungan QR lewat panel Wi-Fi di bawah papan.";
+  } else {
+    txt = "Kamu sedang main sendiri. Ketuk salah satu tombol di atas untuk main bareng teman.";
+  }
+  el("mpHint").textContent = txt;
+}
+function startLocal2P() {
+  if (mode === "2p") {
+    flashMsg = "Kamu sudah di mode 2 Pemain · 1 HP.";
+    snd("select");
+    render();
+    return;
+  }
+  if (mode === "wifi") closePeer();
+  mode = "2p";
+  pendingRematch = false;
+  newGame();
+}
+function startWifiRole(role) {
+  if (mode === "wifi" && wifiRole === role) {
+    openWifiPanel();
+    render();
+    return;
+  }
+  const roleChanged = role !== wifiRole;
+  mode = "wifi";
+  wifiRole = role;
+  myColor = role === "host" ? 1 : -1;
+  humanColor = myColor;
+  pendingRematch = false;
+  if (wifiConnected && !roleChanged) {
+    newGame();
+    netSend({ t: "reset" });
+  } else {
+    if (roleChanged) closePeer();
+    newGame();
+    openWifiPanel();
+  }
+  render();
+}
+el("btnMpLocal").addEventListener("click", startLocal2P);
+el("btnMpHost").addEventListener("click", () => startWifiRole("host"));
+el("btnMpGuest").addEventListener("click", () => startWifiRole("guest"));
+
 function render() {
   renderBoard();
   renderBar(-orientation, { name: el("nameTop"), dot: el("dotTop"), think: el("thinkTop"), caps: el("capsTop"), adv: el("advTop") });
@@ -1858,6 +1976,7 @@ function render() {
   renderMoves();
   renderControls();
   renderAdvPanel();
+  renderMpPanel();
   updateWifiBar();
 }
 
