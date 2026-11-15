@@ -397,6 +397,17 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       .btn:disabled { opacity: 0.45; cursor: default; }
       .btn:disabled:active { transform: none; }
 
+      /* ---------- banner permintaan urungkan (mode 2 HP) ---------- */
+      .undo-banner {
+        background: var(--panel);
+        border: 1.5px solid var(--gold);
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+      .undo-banner-text { margin: 0 0 8px; font-weight: 700; font-size: 15px; line-height: 1.4; }
+      .undo-banner-actions { display: flex; gap: 8px; }
+      .undo-banner-actions .btn { min-height: 44px; }
+
       /* ---------- mode fokus / layar penuh saat main ---------- */
       .focus-bar { display: flex; flex-wrap: wrap; gap: 8px; }
       .focus-bar .btn { flex: 1 1 30%; min-height: 42px; font-size: 14px; padding: 8px 6px; }
@@ -844,11 +855,23 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
       <p class="status" id="status" role="status" aria-live="polite">Giliran Putih</p>
 
+      <div class="undo-banner hidden" id="undoBanner" role="alert">
+        <p class="undo-banner-text" id="undoBannerText">Lawan minta urungkan.</p>
+        <div class="undo-banner-actions" id="undoIncomingActions">
+          <button type="button" class="btn primary" id="btnUndoAccept">Terima</button>
+          <button type="button" class="btn" id="btnUndoReject">Tolak</button>
+        </div>
+        <div class="undo-banner-actions hidden" id="undoOutgoingActions">
+          <button type="button" class="btn" id="btnUndoCancel">Batalkan Permintaan</button>
+        </div>
+      </div>
+
       <div class="focus-bar hidden" id="focusBar">
         <button type="button" class="btn primary" id="btnExitFocus">☰ Menu</button>
         <button type="button" class="btn" id="btnFocusUndo">Urungkan</button>
         <button type="button" class="btn" id="btnFocusFlip">Balik</button>
         <button type="button" class="btn hidden" id="btnFocusLock" aria-pressed="true">Kunci Papan</button>
+        <button type="button" class="btn hidden" id="btnFocusUndoLock" aria-pressed="false">Kunci Urungkan</button>
         <button type="button" class="btn" id="btnFocusNew">Arena Loji</button>
         <button type="button" class="btn" id="btnFocusResign">Suren</button>
       </div>
@@ -859,6 +882,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <button type="button" class="btn" id="btnUndo">Urungkan</button>
         <button type="button" class="btn" id="btnFlip">Balik Papan</button>
         <button type="button" class="btn hidden" id="btnLock" aria-pressed="true">Kunci Papan</button>
+        <button type="button" class="btn hidden" id="btnUndoLock" aria-pressed="false">Kunci Urungkan</button>
         <button type="button" class="btn" id="btnDraw">Tawar Seri</button>
         <button type="button" class="btn" id="btnResign">Suren</button>
       </div>
@@ -904,6 +928,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           </div>
         </div>
         <p class="mp-color-note" id="mpColorNote">Tuan Rumah pilih warna — yang Gabung otomatis sebaliknya.</p>
+        <button type="button" class="toggle-row hidden" id="tglMpUndoLock" aria-pressed="false" style="margin-top:10px;">
+          Kunci Urungkan — tombol Urungkan mati buat dua HP
+          <span class="toggle-pill">Mati</span>
+        </button>
         <p class="mp-hint" id="mpHint"></p>
       </section>
 
@@ -914,7 +942,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <button type="button" class="wifi-reconnect" id="btnReconnect">Sambung Ulang</button>
       </div>
 
-      <p class="mp-steps" id="mpSteps">Cara main 2 HP: 1) Wi-Fi/hotspot yang sama. 2) Satu HP Buat QR, satu Pindai QR. 3) Tuan Rumah pilih warna &amp; buat QR. 4) Pindai QR Jawaban balik — langsung main.</p>
+      <p class="mp-steps" id="mpSteps">Cara main 2 HP: 1) Wi-Fi/hotspot yang sama. 2) Satu HP Buat QR, satu Pindai QR. 3) Tuan Rumah pilih warna &amp; buat QR. 4) Pindai QR Jawaban balik — langsung main. Urungkan di 2 HP cuma jalan kalau lawan ketuk Terima; nyalakan Kunci Urungkan kalau mau tombol Urungkan mati total selama game itu.</p>
 
       <section class="moves-card">
         <h2>Notasi Langkah</h2>
@@ -998,6 +1026,15 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
             <button type="button" data-v="-1" aria-pressed="false">Hitam<small>Lawan duluan</small></button>
           </div>
           <p class="field-note">Yang Gabung otomatis dapat warna sebaliknya.</p>
+        </div>
+
+        <div class="field hidden" id="fieldUndoLock">
+          <span>Urungkan · Mode 2 HP</span>
+          <button type="button" class="toggle-row" id="tglUndoLock" aria-pressed="false">
+            Kunci Urungkan — tombol Urungkan mati total buat dua HP
+            <span class="toggle-pill">Mati</span>
+          </button>
+          <p class="field-note">Kunci mati = Urungkan boleh, tapi jadi permintaan: langkah terakhir baru ke-urungkan di dua HP kalau lawan ketuk Terima. Kunci nyala = tidak ada yang bisa urungkan selama game itu, dan kuncinya tidak bisa dibuka lagi di tengah game — cuma bisa diganti pas mulai game baru dari Arena Loji.</p>
         </div>
 
         <div class="field">
@@ -1628,6 +1665,9 @@ function setEndFlavor(winner) {
 }
 let focusMode = false;          // mode fokus: menu disembunyikan, papan layar penuh saat main
 let drawOfferBy = 0;            // warna penawar seri (mode 2p), 0 = tidak ada
+let undoLock = false;           // Kunci Urungkan (mode wifi): true = tombol Urungkan mati total buat dua HP selama game ini
+let undoReqBy = 0;              // warna yang sedang minta urungkan (mode wifi), 0 = tidak ada permintaan
+let undoReqHistLen = -1;        // panjang history saat permintaan urungkan dibuat — permintaan gugur begitu ada langkah baru
 let flashMsg = "";              // pesan sesaat di status
 let lastMove = null;            // {f, t}
 let endDismissed = false;
@@ -1839,6 +1879,7 @@ function newGame() {
   resultTitle = ""; resultSub = "";
   resultBadge = ""; resultTaunt = ""; resultMood = "";
   drawOfferBy = 0; flashMsg = ""; lastMove = null; endDismissed = false;
+  undoReqBy = 0; undoReqHistLen = -1; // Kunci Urungkan (undoLock) TIDAK direset di sini: kesepakatan kuncinya berlaku sampai diganti pas mulai game baru
   advStageWon = false;
   el("promoSheet").classList.add("hidden");
   el("endSheet").classList.add("hidden");
@@ -1893,6 +1934,9 @@ function applyMove(m, fromRemote) {
   posKeys.push(key);
   repMap.set(key, (repMap.get(key) || 0) + 1);
   lastMove = { f: f, t: t };
+  // Langkah baru menggugurkan permintaan urungkan yang masih menggantung —
+  // applyMove jalan di dua HP untuk tiap langkah, jadi keduanya bersih sendiri.
+  if (undoReqBy !== 0) { undoReqBy = 0; undoReqHistLen = -1; }
   if (mode === "wifi" && !fromRemote) netSend({ t: "move", m: m });
   selected = -1; targets = new Map();
   // Tawaran seri gugur hanya bila yang jalan adalah pihak yang ditawari;
@@ -1917,7 +1961,7 @@ function popOne() {
   history.pop(); sanList.pop();
 }
 function undoMove() {
-  if (mode === "wifi") return; // langkah yang sudah terkirim ke HP lawan tidak bisa diurungkan sepihak
+  if (mode === "wifi") return; // mode 2 HP: urungkan hanya lewat permintaan yang disetujui lawan (requestUndo)
   if (thinking || history.length === 0) return;
   popOne();
   if ((mode === "solo" || mode === "adv") && board.t !== humanColor && history.length > 0) popOne();
@@ -1933,6 +1977,95 @@ function undoMove() {
   render();
   maybeBot();
 }
+
+/* ---------- Urungkan di mode 2 HP: permintaan, bukan sepihak ----------
+   Mengetuk Urungkan TIDAK langsung membatalkan langkah. Yang terjadi:
+   permintaan terkirim ke HP lawan, di sana muncul banner "Lawan minta
+   urungkan — Terima / Tolak". Langkah terakhir baru dibatalkan di DUA HP
+   kalau lawan mengetuk Terima; Tolak / langkah baru / koneksi putus
+   menggugurkan permintaan. Kalau Kunci Urungkan menyala (undoLock),
+   tombol Urungkan mati total buat dua-duanya selama game itu. */
+function handleUndoClick() {
+  if (mode === "wifi") requestUndo();
+  else undoMove();
+}
+function requestUndo() {
+  if (mode !== "wifi" || !wifiConnected) return;
+  if (gameOver) {
+    flashMsg = "Permainan sudah selesai — pakai Main Lagi untuk main ulang.";
+    render();
+    return;
+  }
+  if (undoLock) {
+    flashMsg = "Urungkan terkunci di game ini — tombol Urungkan mati buat dua HP.";
+    snd("select");
+    render();
+    return;
+  }
+  if (history.length === 0 || undoReqBy !== 0) return;
+  undoReqBy = myColor;
+  undoReqHistLen = history.length;
+  flashMsg = "";
+  netSend({ t: "undo-offer" });
+  snd("select");
+  render();
+}
+/* Jalankan pembatalan 1 langkah terakhir di HP ini. Dipakai di HP yang
+   mengetuk Terima dan di HP peminta saat kabar Terima tiba — keduanya
+   membatalkan langkah yang sama dari riwayat yang sama, jadi tetap sinkron. */
+function applyWifiUndo() {
+  undoReqBy = 0; undoReqHistLen = -1;
+  if (history.length === 0) { render(); return; }
+  popOne();
+  gameOver = false; resultTitle = ""; resultSub = "";
+  resultBadge = ""; resultTaunt = ""; resultMood = "";
+  el("endSheet").classList.add("hidden");
+  endDismissed = false;
+  pendingRematch = false;
+  drawOfferBy = 0; flashMsg = "Langkah terakhir diurungkan — permainan lanjut.";
+  selected = -1; targets = new Map(); pendingPromo = null;
+  el("promoSheet").classList.add("hidden");
+  lastMove = history.length ? { f: history[history.length - 1] & 127, t: (history[history.length - 1] >> 7) & 127 } : null;
+  legalCache = legalMoves(board);
+  snd("select");
+  render();
+}
+el("btnUndoAccept").addEventListener("click", () => {
+  if (mode !== "wifi" || undoReqBy !== -myColor) return;
+  netSend({ t: "undo-accept" }); // kabari peminta dulu, baru batalkan di HP ini
+  applyWifiUndo();
+});
+el("btnUndoReject").addEventListener("click", () => {
+  if (mode !== "wifi" || undoReqBy !== -myColor) return;
+  undoReqBy = 0; undoReqHistLen = -1;
+  flashMsg = "Kamu menolak urungkan — permainan lanjut.";
+  netSend({ t: "undo-reject" });
+  snd("select");
+  render();
+});
+el("btnUndoCancel").addEventListener("click", () => {
+  if (mode !== "wifi" || undoReqBy !== myColor) return;
+  undoReqBy = 0; undoReqHistLen = -1;
+  flashMsg = "Permintaan urungkan dibatalkan.";
+  netSend({ t: "undo-cancel" });
+  render();
+});
+/* Kunci Urungkan dari dalam game: sekali menyala, mati buat dua HP dan
+   TIDAK bisa dibuka lagi selama game ini — membuka cuma bisa lewat
+   Arena Loji pas mulai game baru. Menyalakan kunci juga menggugurkan
+   permintaan urungkan yang sedang menggantung. */
+function lockUndoNow() {
+  if (mode !== "wifi" || undoLock) return;
+  undoLock = true;
+  setup.undoLock = true;
+  if (undoReqBy !== 0) { undoReqBy = 0; undoReqHistLen = -1; netSend({ t: "undo-cancel" }); }
+  netSend({ t: "undo-lock", on: true });
+  flashMsg = "Urungkan dikunci — tombol Urungkan mati buat dua HP selama game ini.";
+  snd("select");
+  render();
+}
+el("btnUndoLock").addEventListener("click", lockUndoNow);
+el("btnFocusUndoLock").addEventListener("click", lockUndoNow);
 
 /* ---------- bot ----------
    Pencarian langkah bot dijalankan di Web Worker (benang terpisah) supaya
@@ -2212,6 +2345,12 @@ function renderStatus() {
   } else if (mode === "wifi" && !wifiConnected) {
     main = "Belum terhubung ke HP lawan";
     sub = "Ketuk “Sambung Ulang” untuk membuka panel Wi-Fi dan menyambung lewat QR.";
+  } else if (mode === "wifi" && undoReqBy === -myColor) {
+    main = "Lawan minta urungkan";
+    sub = "Ketuk “Terima” di banner untuk membatalkan langkah terakhir di dua HP, atau “Tolak” untuk lanjut main.";
+  } else if (mode === "wifi" && undoReqBy === myColor) {
+    main = "Permintaan urungkan terkirim";
+    sub = "Menunggu lawan mengetuk Terima di HP-nya…";
   } else if (flashMsg) {
     main = flashMsg;
     sub = "Giliran " + COLOR_ID[board.t];
@@ -2230,7 +2369,7 @@ function renderStatus() {
     main = "Giliran " + COLOR_ID[board.t] + (inCheckNow() ? " — Skak!" : "");
     if (mode === "solo") sub = board.t === humanColor ? "Ketuk buahmu, lalu ketuk petak tujuan." : "";
     else if (mode === "adv") sub = board.t === humanColor ? "Stage " + advStage + " · Bot " + LEVELS[levelKey].name + " — menang untuk membuka stage berikutnya." : "";
-    else if (mode === "wifi") sub = board.t === myColor ? "Giliranmu — ketuk buahmu, lalu ketuk petak tujuan." : "Menunggu langkah lawan di HP-nya…";
+    else if (mode === "wifi") sub = (board.t === myColor ? "Giliranmu — ketuk buahmu, lalu ketuk petak tujuan." : "Menunggu langkah lawan di HP-nya…") + (undoLock ? " Urungkan terkunci di game ini." : "");
     else sub = boardLock ? "Papan terkunci — Putih selalu di bawah." : "Serahkan HP ke pemain " + COLOR_ID[board.t] + ".";
   }
   statusEl.innerHTML = "";
@@ -2306,11 +2445,54 @@ function toggleBoardLock() {
   snd("select");
   render();
 }
+/* ---------- Kunci Urungkan + banner permintaan (khusus mode wifi) ----------
+   Tombol Kunci Urungkan cuma tampil di mode 2 HP. Menyala = tombol
+   Urungkan mati total buat dua HP; tombol kuncinya sendiri ikut mati
+   (tidak bisa dibuka di tengah game). Banner permintaan cuma tampil
+   selama ada permintaan urungkan yang menggantung. */
+function syncUndoUI() {
+  const showLock = mode === "wifi";
+  ["btnUndoLock", "btnFocusUndoLock"].forEach(id => {
+    const b = el(id);
+    b.classList.toggle("hidden", !showLock);
+    b.setAttribute("aria-pressed", String(undoLock));
+    b.classList.toggle("lock-on", undoLock);
+    b.innerHTML = (undoLock ? LOCK_SVG_ON : LOCK_SVG_OFF) + "Kunci Urungkan" +
+      '<span class="lock-state">' + (undoLock ? "Terkunci" : "Terbuka") + "</span>";
+    b.disabled = undoLock; // sudah terkunci tidak bisa dibuka lagi selama game ini
+  });
+  const banner = el("undoBanner");
+  const showBanner = mode === "wifi" && wifiConnected && undoReqBy !== 0;
+  banner.classList.toggle("hidden", !showBanner);
+  if (showBanner) {
+    const incoming = undoReqBy === -myColor;
+    const lastSan = sanList.length ? sanList[sanList.length - 1] : "";
+    el("undoBannerText").textContent = incoming
+      ? "Lawan minta urungkan — langkah terakhir" + (lastSan ? " (" + lastSan + ")" : "") + " dibatalkan di dua HP kalau kamu Terima."
+      : "Kamu minta urungkan — menunggu lawan mengetuk Terima di HP-nya.";
+    el("undoIncomingActions").classList.toggle("hidden", !incoming);
+    el("undoOutgoingActions").classList.toggle("hidden", incoming);
+  }
+}
 function renderControls() {
   syncDiffBar();
   syncLockUI();
-  el("btnUndo").disabled = thinking || history.length === 0 || mode === "wifi";
-  el("btnFocusUndo").disabled = el("btnUndo").disabled;
+  syncUndoUI();
+  let undoOff;
+  if (mode === "wifi") {
+    // 2 HP: Urungkan = kirim permintaan. Mati kalau terkunci, belum
+    // terhubung, belum ada langkah, atau ada permintaan yang menggantung.
+    undoOff = !wifiConnected || undoLock || history.length === 0 || undoReqBy !== 0;
+  } else {
+    undoOff = thinking || history.length === 0;
+  }
+  el("btnUndo").disabled = undoOff;
+  el("btnFocusUndo").disabled = undoOff;
+  const undoLabel = mode === "wifi" && undoLock ? "Urungkan Terkunci"
+    : mode === "wifi" && undoReqBy === myColor ? "Menunggu Lawan…"
+    : "Urungkan";
+  el("btnUndo").textContent = undoLabel;
+  el("btnFocusUndo").textContent = undoLabel;
   el("btnResign").disabled = gameOver || thinking;
   el("btnFocusResign").disabled = gameOver || thinking;
   const drawBtn = el("btnDraw");
@@ -2446,6 +2628,15 @@ function renderMpPanel() {
     : wifiRole === "host"
       ? "Tuan Rumah pilih warna — yang Gabung otomatis sebaliknya."
       : "Warnamu otomatis sebaliknya dari Tuan Rumah.";
+  // Kunci Urungkan di panel utama: cuma tampil di mode wifi. Sebelum
+  // terhubung boleh dinyalakan/dimatikan bebas; sesudah terhubung cuma
+  // bisa dinyalakan (mengunci buat dua HP) dan tidak bisa dimatikan lagi
+  // selama game itu — sama seperti tombol kunci di samping papan.
+  const mpLock = el("tglMpUndoLock");
+  mpLock.classList.toggle("hidden", mode !== "wifi");
+  mpLock.setAttribute("aria-pressed", String(undoLock));
+  mpLock.querySelector(".toggle-pill").textContent = undoLock ? "Terkunci" : "Mati";
+  mpLock.disabled = undoLock && wifiConnected;
 }
 function startSolo() {
   if (mode === "solo") {
@@ -2536,6 +2727,22 @@ el("wifiColorSeg").addEventListener("click", ev => {
   const b = ev.target.closest("button[data-v]");
   if (!b || b.disabled) return;
   setHostColor(parseInt(b.dataset.v, 10));
+});
+el("tglMpUndoLock").addEventListener("click", () => {
+  if (mode !== "wifi") return;
+  if (undoLock) {
+    if (wifiConnected) return; // terkunci tidak bisa dibuka di tengah game
+    undoLock = false;
+    setup.undoLock = false;
+    snd("select");
+    render();
+    return;
+  }
+  if (wifiConnected) { lockUndoNow(); return; } // menyalakan saat terhubung mengunci dua HP sekaligus
+  undoLock = true;
+  setup.undoLock = true;
+  snd("select");
+  render();
 });
 /* Tukar warna setelah terhubung — kedua HP bertukar bidak, game baru, tanpa QR ulang. */
 function swapColors(fromRemote) {
@@ -2654,7 +2861,7 @@ el("btnFocusFlip").addEventListener("click", () => {
   snd("select");
   render();
 });
-el("btnFocusUndo").addEventListener("click", undoMove);
+el("btnFocusUndo").addEventListener("click", handleUndoClick);
 el("btnFocusNew").addEventListener("click", openSetup);
 
 /* ---------- menyerah (keluar = menyerah) ----------
@@ -2711,7 +2918,7 @@ el("btnFlip").addEventListener("click", () => {
 });
 el("btnLock").addEventListener("click", toggleBoardLock);
 el("btnFocusLock").addEventListener("click", toggleBoardLock);
-el("btnUndo").addEventListener("click", undoMove);
+el("btnUndo").addEventListener("click", handleUndoClick);
 
 el("btnResign").addEventListener("click", openResignConfirm);
 el("btnFocusResign").addEventListener("click", openResignConfirm);
@@ -2819,7 +3026,7 @@ el("btnView").addEventListener("click", () => {
 });
 
 /* ---------- lembar pengaturan ---------- */
-const setup = { mode: "solo", level: "normal", colorChoice: 1, boardLock: true, sound: true, wifiRole: "host", wifiColor: 1 };
+const setup = { mode: "solo", level: "normal", colorChoice: 1, boardLock: true, sound: true, wifiRole: "host", wifiColor: 1, undoLock: false };
 function syncSetupUI() {
   const mark = (id, val) => {
     el(id).querySelectorAll("button[data-v]").forEach(b => {
@@ -2837,6 +3044,7 @@ function syncSetupUI() {
   el("fieldLock").classList.toggle("hidden", setup.mode !== "2p");
   el("fieldWifiRole").classList.toggle("hidden", setup.mode !== "wifi");
   el("fieldWifiColor").classList.toggle("hidden", setup.mode !== "wifi");
+  el("fieldUndoLock").classList.toggle("hidden", setup.mode !== "wifi");
   // warna hanya dipilih Tuan Rumah — untuk peran Gabung pemilih warna dimatikan
   el("segWifiColor").querySelectorAll("button[data-v]").forEach(b => {
     b.disabled = setup.wifiRole !== "host";
@@ -2847,6 +3055,9 @@ function syncSetupUI() {
   const ts = el("tglSound");
   ts.setAttribute("aria-pressed", String(setup.sound));
   ts.querySelector(".toggle-pill").textContent = setup.sound ? "Nyala" : "Mati";
+  const tu = el("tglUndoLock");
+  tu.setAttribute("aria-pressed", String(setup.undoLock));
+  tu.querySelector(".toggle-pill").textContent = setup.undoLock ? "Terkunci" : "Mati";
 }
 function segBind(id, key, isNum) {
   el(id).addEventListener("click", ev => {
@@ -2863,6 +3074,7 @@ segBind("segWifiRole", "wifiRole", false);
 segBind("segWifiColor", "wifiColor", true);
 el("tglLock").addEventListener("click", () => { setup.boardLock = !setup.boardLock; syncSetupUI(); });
 el("tglSound").addEventListener("click", () => { setup.sound = !setup.sound; syncSetupUI(); });
+el("tglUndoLock").addEventListener("click", () => { setup.undoLock = !setup.undoLock; syncSetupUI(); });
 
 function openSetup() {
   setup.mode = mode;
@@ -2872,6 +3084,7 @@ function openSetup() {
   setup.sound = soundOn;
   setup.wifiRole = wifiRole;
   setup.wifiColor = hostColor;
+  setup.undoLock = undoLock;
   syncSetupUI();
   el("setupModal").classList.remove("hidden");
 }
@@ -2898,6 +3111,8 @@ el("btnStart").addEventListener("click", () => {
     const roleChanged = setup.wifiRole !== wifiRole;
     wifiRole = setup.wifiRole;
     pendingRematch = false;
+    const lockChanged = setup.undoLock !== undoLock;
+    undoLock = setup.undoLock; // kesepakatan Kunci Urungkan untuk game yang dimulai ini
     if (wifiConnected && !roleChanged) {
       // masih tersambung dengan lawan yang sama
       if (wifiRole === "host" && setup.wifiColor !== hostColor) {
@@ -2920,6 +3135,14 @@ el("btnStart").addEventListener("click", () => {
       if (roleChanged) closePeer();
       newGame();
       openWifiPanel();
+    }
+    if (wifiConnected && !roleChanged && lockChanged) {
+      // game baru dengan kesepakatan kunci yang berubah: kabari HP lawan sesudah reset
+      netSend({ t: "undo-lock", on: undoLock });
+      flashMsg = undoLock
+        ? "Urungkan dikunci untuk game baru ini — tombol Urungkan mati buat dua HP."
+        : "Kunci Urungkan dibuka untuk game baru ini — Urungkan boleh lewat persetujuan lawan.";
+      render();
     }
     return;
   }
@@ -3109,6 +3332,7 @@ function closePeer() {
   if (dchan) { try { dchan.close(); } catch (e) {} dchan = null; }
   if (peer) { try { peer.close(); } catch (e) {} peer = null; }
   wifiConnected = false;
+  undoReqBy = 0; undoReqHistLen = -1;
 }
 function setupChannel(ch) {
   dchan = ch;
@@ -3119,11 +3343,15 @@ function setupChannel(ch) {
     flashMsg = "";
     updateWifiBar();
     render();
-    if (wifiRole === "host") netSend({ t: "sync", hist: history.slice() });
+    if (wifiRole === "host") {
+      netSend({ t: "sync", hist: history.slice() });
+      if (undoLock) netSend({ t: "undo-lock", on: true }); // yang Gabung ikut terkunci
+    }
     setTimeout(() => el("wifiModal").classList.add("hidden"), 900);
   };
   ch.onclose = () => {
     if (wifiConnected) { wifiConnected = false; flashMsg = "Koneksi ke HP lawan putus."; }
+    undoReqBy = 0; undoReqHistLen = -1; // permintaan urungkan gugur saat koneksi putus
     updateWifiBar();
     render();
   };
@@ -3141,9 +3369,9 @@ async function hostCreateOffer() {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     await waitIce(pc);
-    showSignalQR({ type: pc.localDescription.type, sdp: pc.localDescription.sdp, hc: hostColor },
+    showSignalQR({ type: pc.localDescription.type, sdp: pc.localDescription.sdp, hc: hostColor, ul: undoLock ? 1 : 0 },
       "QR Undangan — tunjukkan ke HP lawan untuk dipindai");
-    wifiStatus("QR siap — minta lawan pindai. Kamu pegang " + COLOR_ID[myColor] + ", lawan " + COLOR_ID[-myColor] + ". Lalu pindai QR Jawaban lawan (langkah 2).");
+    wifiStatus("QR siap — minta lawan pindai. Kamu pegang " + COLOR_ID[myColor] + ", lawan " + COLOR_ID[-myColor] + ". Lalu pindai QR Jawaban lawan (langkah 2)." + (undoLock ? " Kunci Urungkan menyala — tombol Urungkan mati buat dua HP di game ini." : ""));
   } catch (e) {
     wifiStatus("Gagal membuat undangan: " + (e && e.message ? e.message : e));
   }
@@ -3175,6 +3403,10 @@ async function guestApplyOffer(signalStr) {
     myColor = -hostColor;
     humanColor = myColor;
     setup.wifiColor = hostColor;
+    // Kunci Urungkan ikut keputusan Tuan Rumah di QR Undangan, sama seperti
+    // warna (QR dari versi lama tanpa kode kunci = tidak dikunci).
+    undoLock = sig.ul === 1;
+    setup.undoLock = undoLock;
     newGame();
     const pc = newPeer();
     pc.ondatachannel = ev => setupChannel(ev.channel);
@@ -3238,6 +3470,46 @@ function onNetMessage(data) {
     if (!gameOver) endRematchless("Remis", "Seri disepakati kedua pemain.", 0);
   } else if (msg.t === "draw-cancel") {
     if (drawOfferBy === -myColor) { drawOfferBy = 0; render(); }
+  } else if (msg.t === "undo-offer") {
+    // Lawan minta urungkan: tampilkan banner Terima / Tolak di HP ini.
+    // Ditolak diam-diam kalau terkunci / belum ada langkah / sudah ada permintaan.
+    if (mode === "wifi" && !undoLock && !gameOver && history.length > 0 && undoReqBy === 0) {
+      undoReqBy = -myColor;
+      undoReqHistLen = history.length;
+      flashMsg = "";
+      snd("select");
+      render();
+    }
+  } else if (msg.t === "undo-accept") {
+    // Lawan mengetuk Terima: batalkan langkah terakhir di HP ini juga.
+    if (mode === "wifi" && undoReqBy === myColor && undoReqHistLen === history.length) applyWifiUndo();
+    else if (mode === "wifi" && undoReqBy === myColor) { undoReqBy = 0; undoReqHistLen = -1; render(); }
+  } else if (msg.t === "undo-reject") {
+    if (mode === "wifi" && undoReqBy === myColor) {
+      undoReqBy = 0; undoReqHistLen = -1;
+      flashMsg = "Lawan menolak urungkan — permainan lanjut.";
+      snd("select");
+      render();
+    }
+  } else if (msg.t === "undo-cancel") {
+    if (mode === "wifi" && undoReqBy === -myColor) {
+      undoReqBy = 0; undoReqHistLen = -1;
+      flashMsg = "Lawan membatalkan permintaan urungkan.";
+      render();
+    }
+  } else if (msg.t === "undo-lock") {
+    // Kesepakatan Kunci Urungkan berubah (dari dalam game = mengunci;
+    // dari Arena Loji pas mulai game baru = bisa juga membuka).
+    if (mode === "wifi") {
+      undoLock = msg.on === true;
+      setup.undoLock = undoLock;
+      if (undoLock) { undoReqBy = 0; undoReqHistLen = -1; }
+      flashMsg = undoLock
+        ? "Urungkan dikunci — tombol Urungkan mati buat dua HP selama game ini."
+        : "Kunci Urungkan dibuka untuk game baru ini — Urungkan boleh lewat persetujuan lawan.";
+      snd("select");
+      render();
+    }
   } else if (msg.t === "resign") {
     if (!gameOver) endRematchless(COLOR_ID[myColor] + " Menang — " + COLOR_ID[-myColor] + " Menyerah", COLOR_ID[-myColor] + " menyerah — " + COLOR_ID[myColor] + " dinyatakan menang.", myColor);
   } else if (msg.t === "rematch-offer") {
@@ -3408,7 +3680,7 @@ newGame();
     <script>
 /* ---------- offline beneran: service worker + pasang aplikasi ----------
    Halaman ini mendaftarkan sw.js yang tersaji di sebelahnya (sumber
-   worker-nya: data:application/javascript;base64,LyogTE9KSV9TVyDigJQgTG9qaSBDaGVzcyBzZXJ2aWNlIHdvcmtlci4KICAgVHVnYXNueWE6IHBhcyBnYW1lIHBlcnRhbWEgZGlidWthIChpbnRlcm5ldCBueWFsYSksIHNpbXBhbiBoYWxhbWFuICsKICAgaWtvbiBrZSBIUC4gU2VzdWRhaCBpdHUgZ2FtZSBkaXNhamlrYW4gZGFyaSBzaW1wYW5hbiBpdHUsIGphZGkgcGludGFzYW4gLwogICBhcGxpa2FzaSB0ZXRhcCBrZWJ1a2Egd2FsYXUgZGF0YSBtYXRpLgogICBGaWxlIGluaSBiZWtlcmphIGRhcmkgZHVhIHBvc2lzaTogZGkgcm9vdCBzaXR1cyAoc2NvcGUgPSBzZWx1cnVoIHNpdHVzKQogICBhdGF1IGRpIGRhbGFtIGZvbGRlciBhc3NldHMvIChpYSBtZW5naGl0dW5nIHJvb3QgZGFyaSBwb3Npc2lueWEgc2VuZGlyaSkuCiAgIE5haWtrYW4gbm9tb3IgQ0FDSEUgdGlhcCByaWxpcyBzdXBheWEgc2ltcGFuYW4gbGFtYSBkaWdhbnRpLiAqLwp2YXIgQ0FDSEUgPSAibG9qaS1jaGVzcy12MzIiOwp2YXIgU1dfUEFUSCA9IHNlbGYubG9jYXRpb24ucGF0aG5hbWUgfHwgIi8iOwp2YXIgU1dfRElSID0gU1dfUEFUSC5zbGljZSgwLCBTV19QQVRILmxhc3RJbmRleE9mKCIvIikgKyAxKTsKdmFyIElOX0FTU0VUUyA9IFNXX0RJUi5zbGljZShTV19ESVIubGVuZ3RoIC0gOCkgPT09ICIvYXNzZXRzLyI7CnZhciBST09UID0gSU5fQVNTRVRTID8gU1dfRElSLnNsaWNlKDAsIFNXX0RJUi5sZW5ndGggLSA3KSA6IFNXX0RJUjsKdmFyIEFTU0VUUyA9IFJPT1QgKyAiYXNzZXRzLyI7CnZhciBDT1JFID0gWwogIFJPT1QsCiAgUk9PVCArICJpbmRleC5odG1sIiwKICBBU1NFVFMgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIEFTU0VUUyArICJpY29uLTE5Mi5wbmciLAogIEFTU0VUUyArICJpY29uLTUxMi5wbmciLAogIEFTU0VUUyArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgQVNTRVRTICsgImZhdmljb24tMzIucG5nIiwKICBTV19ESVIgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIFNXX0RJUiArICJpY29uLTE5Mi5wbmciLAogIFNXX0RJUiArICJpY29uLTUxMi5wbmciLAogIFNXX0RJUiArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgU1dfRElSICsgImZhdmljb24tMzIucG5nIgpdOwoKZnVuY3Rpb24gcHJlY2FjaGUoY2FjaGUpIHsKICB2YXIgc2VlbiA9IHt9OwogIHZhciBqb2JzID0gW107CiAgQ09SRS5mb3JFYWNoKGZ1bmN0aW9uICh1KSB7CiAgICBpZiAoc2Vlblt1XSkgcmV0dXJuOwogICAgc2Vlblt1XSA9IHRydWU7CiAgICBqb2JzLnB1c2goCiAgICAgIGZldGNoKHUpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgIGlmIChyZXMgJiYgcmVzLm9rKSByZXR1cm4gY2FjaGUucHV0KHUsIHJlcyk7CiAgICAgIH0pLmNhdGNoKGZ1bmN0aW9uICgpIHsgLyogc2F0dSBmaWxlIGdhZ2FsIHRpZGFrIG1lbmdnYWdhbGthbiBzaXNhbnlhICovIH0pCiAgICApOwogIH0pOwogIHJldHVybiBQcm9taXNlLmFsbChqb2JzKTsKfQoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJpbnN0YWxsIiwgZnVuY3Rpb24gKGV2ZW50KSB7CiAgZXZlbnQud2FpdFVudGlsKAogICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4ocHJlY2FjaGUpLnRoZW4oZnVuY3Rpb24gKCkgeyByZXR1cm4gc2VsZi5za2lwV2FpdGluZygpOyB9KQogICk7Cn0pOwoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJhY3RpdmF0ZSIsIGZ1bmN0aW9uIChldmVudCkgewogIGV2ZW50LndhaXRVbnRpbCgKICAgIGNhY2hlcy5rZXlzKCkudGhlbihmdW5jdGlvbiAoa2V5cykgewogICAgICByZXR1cm4gUHJvbWlzZS5hbGwoa2V5cy5tYXAoZnVuY3Rpb24gKGspIHsKICAgICAgICBpZiAoay5pbmRleE9mKCJsb2ppLWNoZXNzLSIpID09PSAwICYmIGsgIT09IENBQ0hFKSByZXR1cm4gY2FjaGVzLmRlbGV0ZShrKTsKICAgICAgfSkpOwogICAgfSkudGhlbihmdW5jdGlvbiAoKSB7IHJldHVybiBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSkKICApOwp9KTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcigiZmV0Y2giLCBmdW5jdGlvbiAoZXZlbnQpIHsKICB2YXIgcmVxID0gZXZlbnQucmVxdWVzdDsKICBpZiAocmVxLm1ldGhvZCAhPT0gIkdFVCIpIHJldHVybjsKICB2YXIgdXJsOwogIHRyeSB7IHVybCA9IG5ldyBVUkwocmVxLnVybCk7IH0gY2F0Y2ggKGUpIHsgcmV0dXJuOyB9CiAgaWYgKHVybC5vcmlnaW4gIT09IHNlbGYubG9jYXRpb24ub3JpZ2luKSByZXR1cm47CgogIGlmIChyZXEubW9kZSA9PT0gIm5hdmlnYXRlIikgewogICAgLyogSGFsYW1hbjogY2FjaGUgZHVsdSAobGFuZ3N1bmcga2VidWthLCBvZmZsaW5lIHB1biBiaXNhKSwKICAgICAgIGphcmluZ2FuIGphbGFuIGRpIGJlbGFrYW5nIGxheWFyIHVudHVrIG1lbnllZ2Fya2FuIHNpbXBhbmFuLiAqLwogICAgZXZlbnQucmVzcG9uZFdpdGgoCiAgICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICAgIHZhciBuZXQgPSBmZXRjaChyZXEpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgICAgaWYgKHJlcyAmJiByZXMub2spIHsKICAgICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oZnVuY3Rpb24gKGMpIHsgYy5wdXQoUk9PVCArICJpbmRleC5odG1sIiwgY29weSk7IH0pOwogICAgICAgICAgfQogICAgICAgICAgcmV0dXJuIHJlczsKICAgICAgICB9KS5jYXRjaChmdW5jdGlvbiAoKSB7IHJldHVybiBudWxsOyB9KTsKICAgICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICAgIHJldHVybiBuZXQudGhlbihmdW5jdGlvbiAocmVzKSB7CiAgICAgICAgICBpZiAocmVzKSByZXR1cm4gcmVzOwogICAgICAgICAgcmV0dXJuIGNhY2hlcy5tYXRjaChST09UICsgImluZGV4Lmh0bWwiLCB7IGlnbm9yZVNlYXJjaDogdHJ1ZSB9KTsKICAgICAgICB9KTsKICAgICAgfSkKICAgICk7CiAgICByZXR1cm47CiAgfQoKICAvKiBBc2V0IChpa29uLCBtYW5pZmVzdCwgZGxsLik6IGNhY2hlIGR1bHUsIGphcmluZ2FuIGthbGF1IGJlbHVtIGFkYS4gKi8KICBldmVudC5yZXNwb25kV2l0aCgKICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICByZXR1cm4gZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uIChyZXMpIHsKICAgICAgICBpZiAocmVzICYmIHJlcy5vaykgewogICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgIGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uIChjKSB7IGMucHV0KHJlcSwgY29weSk7IH0pOwogICAgICAgIH0KICAgICAgICByZXR1cm4gcmVzOwogICAgICB9KTsKICAgIH0pCiAgKTsKfSk7Cg== — file yang sama, sadar posisi, jadi bisa
+   worker-nya: data:application/javascript;base64,LyogTE9KSV9TVyDigJQgTG9qaSBDaGVzcyBzZXJ2aWNlIHdvcmtlci4KICAgVHVnYXNueWE6IHBhcyBnYW1lIHBlcnRhbWEgZGlidWthIChpbnRlcm5ldCBueWFsYSksIHNpbXBhbiBoYWxhbWFuICsKICAgaWtvbiBrZSBIUC4gU2VzdWRhaCBpdHUgZ2FtZSBkaXNhamlrYW4gZGFyaSBzaW1wYW5hbiBpdHUsIGphZGkgcGludGFzYW4gLwogICBhcGxpa2FzaSB0ZXRhcCBrZWJ1a2Egd2FsYXUgZGF0YSBtYXRpLgogICBGaWxlIGluaSBiZWtlcmphIGRhcmkgZHVhIHBvc2lzaTogZGkgcm9vdCBzaXR1cyAoc2NvcGUgPSBzZWx1cnVoIHNpdHVzKQogICBhdGF1IGRpIGRhbGFtIGZvbGRlciBhc3NldHMvIChpYSBtZW5naGl0dW5nIHJvb3QgZGFyaSBwb3Npc2lueWEgc2VuZGlyaSkuCiAgIE5haWtrYW4gbm9tb3IgQ0FDSEUgdGlhcCByaWxpcyBzdXBheWEgc2ltcGFuYW4gbGFtYSBkaWdhbnRpLiAqLwp2YXIgQ0FDSEUgPSAibG9qaS1jaGVzcy12MzMiOwp2YXIgU1dfUEFUSCA9IHNlbGYubG9jYXRpb24ucGF0aG5hbWUgfHwgIi8iOwp2YXIgU1dfRElSID0gU1dfUEFUSC5zbGljZSgwLCBTV19QQVRILmxhc3RJbmRleE9mKCIvIikgKyAxKTsKdmFyIElOX0FTU0VUUyA9IFNXX0RJUi5zbGljZShTV19ESVIubGVuZ3RoIC0gOCkgPT09ICIvYXNzZXRzLyI7CnZhciBST09UID0gSU5fQVNTRVRTID8gU1dfRElSLnNsaWNlKDAsIFNXX0RJUi5sZW5ndGggLSA3KSA6IFNXX0RJUjsKdmFyIEFTU0VUUyA9IFJPT1QgKyAiYXNzZXRzLyI7CnZhciBDT1JFID0gWwogIFJPT1QsCiAgUk9PVCArICJpbmRleC5odG1sIiwKICBBU1NFVFMgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIEFTU0VUUyArICJpY29uLTE5Mi5wbmciLAogIEFTU0VUUyArICJpY29uLTUxMi5wbmciLAogIEFTU0VUUyArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgQVNTRVRTICsgImZhdmljb24tMzIucG5nIiwKICBTV19ESVIgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIFNXX0RJUiArICJpY29uLTE5Mi5wbmciLAogIFNXX0RJUiArICJpY29uLTUxMi5wbmciLAogIFNXX0RJUiArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgU1dfRElSICsgImZhdmljb24tMzIucG5nIgpdOwoKZnVuY3Rpb24gcHJlY2FjaGUoY2FjaGUpIHsKICB2YXIgc2VlbiA9IHt9OwogIHZhciBqb2JzID0gW107CiAgQ09SRS5mb3JFYWNoKGZ1bmN0aW9uICh1KSB7CiAgICBpZiAoc2Vlblt1XSkgcmV0dXJuOwogICAgc2Vlblt1XSA9IHRydWU7CiAgICBqb2JzLnB1c2goCiAgICAgIGZldGNoKHUpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgIGlmIChyZXMgJiYgcmVzLm9rKSByZXR1cm4gY2FjaGUucHV0KHUsIHJlcyk7CiAgICAgIH0pLmNhdGNoKGZ1bmN0aW9uICgpIHsgLyogc2F0dSBmaWxlIGdhZ2FsIHRpZGFrIG1lbmdnYWdhbGthbiBzaXNhbnlhICovIH0pCiAgICApOwogIH0pOwogIHJldHVybiBQcm9taXNlLmFsbChqb2JzKTsKfQoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJpbnN0YWxsIiwgZnVuY3Rpb24gKGV2ZW50KSB7CiAgZXZlbnQud2FpdFVudGlsKAogICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4ocHJlY2FjaGUpLnRoZW4oZnVuY3Rpb24gKCkgeyByZXR1cm4gc2VsZi5za2lwV2FpdGluZygpOyB9KQogICk7Cn0pOwoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJhY3RpdmF0ZSIsIGZ1bmN0aW9uIChldmVudCkgewogIGV2ZW50LndhaXRVbnRpbCgKICAgIGNhY2hlcy5rZXlzKCkudGhlbihmdW5jdGlvbiAoa2V5cykgewogICAgICByZXR1cm4gUHJvbWlzZS5hbGwoa2V5cy5tYXAoZnVuY3Rpb24gKGspIHsKICAgICAgICBpZiAoay5pbmRleE9mKCJsb2ppLWNoZXNzLSIpID09PSAwICYmIGsgIT09IENBQ0hFKSByZXR1cm4gY2FjaGVzLmRlbGV0ZShrKTsKICAgICAgfSkpOwogICAgfSkudGhlbihmdW5jdGlvbiAoKSB7IHJldHVybiBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSkKICApOwp9KTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcigiZmV0Y2giLCBmdW5jdGlvbiAoZXZlbnQpIHsKICB2YXIgcmVxID0gZXZlbnQucmVxdWVzdDsKICBpZiAocmVxLm1ldGhvZCAhPT0gIkdFVCIpIHJldHVybjsKICB2YXIgdXJsOwogIHRyeSB7IHVybCA9IG5ldyBVUkwocmVxLnVybCk7IH0gY2F0Y2ggKGUpIHsgcmV0dXJuOyB9CiAgaWYgKHVybC5vcmlnaW4gIT09IHNlbGYubG9jYXRpb24ub3JpZ2luKSByZXR1cm47CgogIGlmIChyZXEubW9kZSA9PT0gIm5hdmlnYXRlIikgewogICAgLyogSGFsYW1hbjogY2FjaGUgZHVsdSAobGFuZ3N1bmcga2VidWthLCBvZmZsaW5lIHB1biBiaXNhKSwKICAgICAgIGphcmluZ2FuIGphbGFuIGRpIGJlbGFrYW5nIGxheWFyIHVudHVrIG1lbnllZ2Fya2FuIHNpbXBhbmFuLiAqLwogICAgZXZlbnQucmVzcG9uZFdpdGgoCiAgICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICAgIHZhciBuZXQgPSBmZXRjaChyZXEpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgICAgaWYgKHJlcyAmJiByZXMub2spIHsKICAgICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oZnVuY3Rpb24gKGMpIHsgYy5wdXQoUk9PVCArICJpbmRleC5odG1sIiwgY29weSk7IH0pOwogICAgICAgICAgfQogICAgICAgICAgcmV0dXJuIHJlczsKICAgICAgICB9KS5jYXRjaChmdW5jdGlvbiAoKSB7IHJldHVybiBudWxsOyB9KTsKICAgICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICAgIHJldHVybiBuZXQudGhlbihmdW5jdGlvbiAocmVzKSB7CiAgICAgICAgICBpZiAocmVzKSByZXR1cm4gcmVzOwogICAgICAgICAgcmV0dXJuIGNhY2hlcy5tYXRjaChST09UICsgImluZGV4Lmh0bWwiLCB7IGlnbm9yZVNlYXJjaDogdHJ1ZSB9KTsKICAgICAgICB9KTsKICAgICAgfSkKICAgICk7CiAgICByZXR1cm47CiAgfQoKICAvKiBBc2V0IChpa29uLCBtYW5pZmVzdCwgZGxsLik6IGNhY2hlIGR1bHUsIGphcmluZ2FuIGthbGF1IGJlbHVtIGFkYS4gKi8KICBldmVudC5yZXNwb25kV2l0aCgKICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICByZXR1cm4gZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uIChyZXMpIHsKICAgICAgICBpZiAocmVzICYmIHJlcy5vaykgewogICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgIGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uIChjKSB7IGMucHV0KHJlcSwgY29weSk7IH0pOwogICAgICAgIH0KICAgICAgICByZXR1cm4gcmVzOwogICAgICB9KTsKICAgIH0pCiAgKTsKfSk7Cg== — file yang sama, sadar posisi, jadi bisa
    ditaruh di root situs atau di folder assets). Sebelum mendaftar, isinya
    dicek dulu beneran file worker, bukan halaman fallback. Sesudah worker
    aktif, halaman + ikon tersimpan di HP dan pintasan/aplikasi kebuka
