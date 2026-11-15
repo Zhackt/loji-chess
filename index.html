@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Loji Chess" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="manifest" href="assets/manifest.webmanifest" />
+    <link rel="manifest" href="data:application/octet-stream;base64,eyJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBlMTMwZiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiaWNvbnMiOlt7InB1cnBvc2UiOiJhbnkiLCJzaXplcyI6IjE5MngxOTIiLCJzcmMiOiJpY29uLTE5Mi5wbmciLCJ0eXBlIjoiaW1hZ2UvcG5nIn0seyJwdXJwb3NlIjoiYW55Iiwic2l6ZXMiOiI1MTJ4NTEyIiwic3JjIjoiaWNvbi01MTIucG5nIiwidHlwZSI6ImltYWdlL3BuZyJ9LHsicHVycG9zZSI6Im1hc2thYmxlIiwic2l6ZXMiOiI1MTJ4NTEyIiwic3JjIjoiaWNvbi01MTIucG5nIiwidHlwZSI6ImltYWdlL3BuZyJ9XSwibmFtZSI6IkxvamkgQ2hlc3MgYnkgTWFyc2VsaW4iLCJvcmllbnRhdGlvbiI6InBvcnRyYWl0Iiwic2NvcGUiOiIuLi8iLCJzaG9ydF9uYW1lIjoiTG9qaSBDaGVzcyIsInN0YXJ0X3VybCI6Ii4uL2luZGV4Lmh0bWwiLCJ0aGVtZV9jb2xvciI6IiMwZjRhMzAifQ==" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230f4a30'/%3E%3Ctext x='50' y='76' font-size='64' text-anchor='middle' fill='%23f7f1de'%3E%E2%99%9E%3C/text%3E%3C/svg%3E" />
     <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png" />
@@ -415,6 +415,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       body.focus #wifiBar,
       body.focus .controls,
       body.focus .moves-card,
+      body.focus #offlineCard,
       body.focus #mpSteps,
       body.focus .foot { display: none !important; }
       body.focus .bar { min-height: 34px; padding: 2px 4px; }
@@ -566,6 +567,17 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         border-radius: 14px;
         padding: 12px 14px;
       }
+      .offline-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 14px;
+      }
+      .offline-card h2 { margin: 0 0 6px; font-size: 16px; }
+      .offline-card p { margin: 0 0 8px; font-size: 13.5px; color: var(--soft); line-height: 1.5; }
+      .offline-card ol { margin: 0 0 12px; padding-left: 20px; font-size: 13.5px; line-height: 1.55; }
+      .offline-card .btn { width: 100%; flex: none; }
+      .offline-status { margin: 10px 0 0 !important; font-size: 13.5px; font-weight: 600; color: inherit !important; min-height: 18px; }
       .moves-card h2 {
         margin: 0 0 8px;
         font-size: 14px;
@@ -844,6 +856,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       <div class="controls">
         <button type="button" class="btn primary" id="btnNew">Arena Loji</button>
         <button type="button" class="btn" id="btnFocus">⛶ Layar Penuh</button>
+        <button type="button" class="btn" id="btnOffline">⬇ Simpan Offline</button>
         <button type="button" class="btn" id="btnUndo">Urungkan</button>
         <button type="button" class="btn" id="btnFlip">Balik Papan</button>
         <button type="button" class="btn hidden" id="btnLock" aria-pressed="true">Kunci Papan</button>
@@ -907,6 +920,21 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       <section class="moves-card">
         <h2>Notasi Langkah</h2>
         <div class="movelist" id="moveList"><p class="empty">Belum ada langkah. Putih jalan dulu.</p></div>
+      </section>
+
+      <section class="offline-card" id="offlineCard">
+        <h2>Main Offline — Tanpa Data</h2>
+        <p>Pasang game ini jadi aplikasi di HP-mu, biar bisa main pas data mati: habis terpasang, game tersimpan di HP dan pintasannya kebuka dari layar utama tanpa internet — di hutan nggak ada sinyal pun bisa. Lihat garis status di bawah tombol Pasang: ada tanda ✓ kalau simpanannya sudah siap. Kalau pemasangan nggak tersedia di browser-mu, cara file di bawah ini selalu jalan tanpa data.</p>
+        <button type="button" class="btn primary" id="btnInstall">📲 Pasang Aplikasi</button>
+        <p class="offline-status" id="pwaStatus" role="status"></p>
+        <p>Tombol Pasang nggak jalan? Pakai cara file — sekali download, tersimpan di folder Download:</p>
+        <ol>
+          <li>Ketuk tombol Download di bawah — file <strong>loji-chess.html</strong> tersimpan di folder Download.</li>
+          <li>Buka aplikasi File, masuk ke folder Download.</li>
+          <li>Ketuk file <strong>loji-chess.html</strong> — game langsung jalan, tanpa data sama sekali.</li>
+        </ol>
+        <button type="button" class="btn" id="btnOfflineCard">⬇ Download File Offline</button>
+        <p class="offline-status" id="offlineStatus" role="status"></p>
       </section>
 
       <p class="foot">Mesin catur Marselin · ±1.300 Elo</p>
@@ -3281,9 +3309,202 @@ el("btnReconnect").addEventListener("click", () => {
   openWifiPanel();
 });
 
+/* ---------- simpan sebagai 1 file offline ----------
+   Cara utama offline sekarang: service worker (di blok skrip terakhir)
+   menyimpan halaman ini di HP pas pertama dibuka, jadi pintasan/aplikasi
+   kebuka walau data mati. Tombol ini tetap disediakan sebagai cadangan:
+   mengunduh SATU file HTML yang isinya game ini utuh — ikon & manifest
+   ditanam sebagai data URI — jadi file-nya bisa dibuka dari folder
+   Download kapan pun, data mati pun jalan. */
+const OFFLINE_ICON_FILES = ["icon-192.png", "icon-512.png", "apple-touch-icon.png", "favicon-32.png"];
+
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error || new Error("baca file gagal"));
+    r.readAsDataURL(blob);
+  });
+}
+
+async function buildOfflineFile() {
+  const dataByName = {};
+  for (const name of OFFLINE_ICON_FILES) {
+    try {
+      const res = await fetch("assets/" + name);
+      if (res.ok) dataByName[name] = await blobToDataURL(await res.blob());
+    } catch (e) { /* ikon itu dilewati — game tetap jalan */ }
+  }
+  let manifestURI = null;
+  try {
+    const res = await fetch("data:application/octet-stream;base64,eyJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBlMTMwZiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiaWNvbnMiOlt7InB1cnBvc2UiOiJhbnkiLCJzaXplcyI6IjE5MngxOTIiLCJzcmMiOiJpY29uLTE5Mi5wbmciLCJ0eXBlIjoiaW1hZ2UvcG5nIn0seyJwdXJwb3NlIjoiYW55Iiwic2l6ZXMiOiI1MTJ4NTEyIiwic3JjIjoiaWNvbi01MTIucG5nIiwidHlwZSI6ImltYWdlL3BuZyJ9LHsicHVycG9zZSI6Im1hc2thYmxlIiwic2l6ZXMiOiI1MTJ4NTEyIiwic3JjIjoiaWNvbi01MTIucG5nIiwidHlwZSI6ImltYWdlL3BuZyJ9XSwibmFtZSI6IkxvamkgQ2hlc3MgYnkgTWFyc2VsaW4iLCJvcmllbnRhdGlvbiI6InBvcnRyYWl0Iiwic2NvcGUiOiIuLi8iLCJzaG9ydF9uYW1lIjoiTG9qaSBDaGVzcyIsInN0YXJ0X3VybCI6Ii4uL2luZGV4Lmh0bWwiLCJ0aGVtZV9jb2xvciI6IiMwZjRhMzAifQ==");
+    if (res.ok) {
+      const m = await res.json();
+      if (m && Array.isArray(m.icons)) {
+        m.icons = m.icons.map(ic => {
+          const base = String(ic.src || "").split("/").pop();
+          return dataByName[base] ? Object.assign({}, ic, { src: dataByName[base] }) : ic;
+        });
+      }
+      manifestURI = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(m));
+    }
+  } catch (e) { /* tanpa manifest pun file tetap jalan */ }
+
+  const root = document.documentElement.cloneNode(true);
+  const body = root.querySelector("body");
+  if (body) body.classList.remove("focus");
+  root.querySelectorAll(".modal, .sheet").forEach(n => n.classList.add("hidden"));
+  const svgIcon = root.querySelector('link[rel="icon"][type="image/svg+xml"]');
+  const svgURI = svgIcon ? svgIcon.getAttribute("href") : null;
+  root.querySelectorAll("[src], [href]").forEach(n => {
+    ["src", "href"].forEach(attr => {
+      const v = n.getAttribute(attr);
+      if (!v || v.indexOf("assets/") !== 0) return;
+      const base = v.split("/").pop();
+      if (dataByName[base]) n.setAttribute(attr, dataByName[base]);
+    });
+  });
+  /* sisa rujukan assets/ yang gagal ditanam: logo pakai ikon SVG sebaris, link ikon dibuang */
+  root.querySelectorAll('img[src^="assets/"]').forEach(n => {
+    if (svgURI) n.setAttribute("src", svgURI); else n.remove();
+  });
+  root.querySelectorAll('link[href^="assets/"]').forEach(n => {
+    if (n.getAttribute("rel") === "manifest") {
+      if (manifestURI) n.setAttribute("href", manifestURI); else n.remove();
+    } else n.remove();
+  });
+  const st = root.querySelector("#offlineStatus");
+  if (st) st.textContent = "";
+  const ps = root.querySelector("#pwaStatus");
+  if (ps) ps.textContent = "";
+  return "<!doctype html>\n" + root.outerHTML;
+}
+
+let offlineBusy = false;
+function saveOfflineFile() {
+  if (offlineBusy) return;
+  const status = el("offlineStatus");
+  if (window.location && window.location.protocol === "file:") {
+    status.textContent = "Kamu lagi buka dari file offline — game ini sudah tersimpan di HP-mu dan jalan tanpa data.";
+    return;
+  }
+  offlineBusy = true;
+  status.textContent = "Menyiapkan file… tunggu sebentar.";
+  buildOfflineFile().then(html => {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "loji-chess.html";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    status.textContent = "Selesai terunduh. Buka folder Download, ketuk loji-chess.html — main tanpa data bisa.";
+  }).catch(() => {
+    status.textContent = "Gagal menyiapkan file. Coba lagi pas internet lagi nyala.";
+  }).then(() => { offlineBusy = false; });
+}
+el("btnOffline").addEventListener("click", saveOfflineFile);
+el("btnOfflineCard").addEventListener("click", saveOfflineFile);
+
 /* ---------- mulai ---------- */
 buildBoard();
 newGame();
+    </script>
+
+
+    <script>
+/* ---------- offline beneran: service worker + pasang aplikasi ----------
+   Halaman ini mendaftarkan sw.js yang tersaji di sebelahnya (sumber
+   worker-nya: data:application/javascript;base64,LyogTE9KSV9TVyDigJQgTG9qaSBDaGVzcyBzZXJ2aWNlIHdvcmtlci4KICAgVHVnYXNueWE6IHBhcyBnYW1lIHBlcnRhbWEgZGlidWthIChpbnRlcm5ldCBueWFsYSksIHNpbXBhbiBoYWxhbWFuICsKICAgaWtvbiBrZSBIUC4gU2VzdWRhaCBpdHUgZ2FtZSBkaXNhamlrYW4gZGFyaSBzaW1wYW5hbiBpdHUsIGphZGkgcGludGFzYW4gLwogICBhcGxpa2FzaSB0ZXRhcCBrZWJ1a2Egd2FsYXUgZGF0YSBtYXRpLgogICBGaWxlIGluaSBiZWtlcmphIGRhcmkgZHVhIHBvc2lzaTogZGkgcm9vdCBzaXR1cyAoc2NvcGUgPSBzZWx1cnVoIHNpdHVzKQogICBhdGF1IGRpIGRhbGFtIGZvbGRlciBhc3NldHMvIChpYSBtZW5naGl0dW5nIHJvb3QgZGFyaSBwb3Npc2lueWEgc2VuZGlyaSkuCiAgIE5haWtrYW4gbm9tb3IgQ0FDSEUgdGlhcCByaWxpcyBzdXBheWEgc2ltcGFuYW4gbGFtYSBkaWdhbnRpLiAqLwp2YXIgQ0FDSEUgPSAibG9qaS1jaGVzcy12MzEiOwp2YXIgU1dfUEFUSCA9IHNlbGYubG9jYXRpb24ucGF0aG5hbWUgfHwgIi8iOwp2YXIgU1dfRElSID0gU1dfUEFUSC5zbGljZSgwLCBTV19QQVRILmxhc3RJbmRleE9mKCIvIikgKyAxKTsKdmFyIElOX0FTU0VUUyA9IFNXX0RJUi5zbGljZShTV19ESVIubGVuZ3RoIC0gOCkgPT09ICIvYXNzZXRzLyI7CnZhciBST09UID0gSU5fQVNTRVRTID8gU1dfRElSLnNsaWNlKDAsIFNXX0RJUi5sZW5ndGggLSA3KSA6IFNXX0RJUjsKdmFyIEFTU0VUUyA9IFJPT1QgKyAiYXNzZXRzLyI7CnZhciBDT1JFID0gWwogIFJPT1QsCiAgUk9PVCArICJpbmRleC5odG1sIiwKICBBU1NFVFMgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIEFTU0VUUyArICJpY29uLTE5Mi5wbmciLAogIEFTU0VUUyArICJpY29uLTUxMi5wbmciLAogIEFTU0VUUyArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgQVNTRVRTICsgImZhdmljb24tMzIucG5nIiwKICBTV19ESVIgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIFNXX0RJUiArICJpY29uLTE5Mi5wbmciLAogIFNXX0RJUiArICJpY29uLTUxMi5wbmciLAogIFNXX0RJUiArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgU1dfRElSICsgImZhdmljb24tMzIucG5nIgpdOwoKZnVuY3Rpb24gcHJlY2FjaGUoY2FjaGUpIHsKICB2YXIgc2VlbiA9IHt9OwogIHZhciBqb2JzID0gW107CiAgQ09SRS5mb3JFYWNoKGZ1bmN0aW9uICh1KSB7CiAgICBpZiAoc2Vlblt1XSkgcmV0dXJuOwogICAgc2Vlblt1XSA9IHRydWU7CiAgICBqb2JzLnB1c2goCiAgICAgIGZldGNoKHUpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgIGlmIChyZXMgJiYgcmVzLm9rKSByZXR1cm4gY2FjaGUucHV0KHUsIHJlcyk7CiAgICAgIH0pLmNhdGNoKGZ1bmN0aW9uICgpIHsgLyogc2F0dSBmaWxlIGdhZ2FsIHRpZGFrIG1lbmdnYWdhbGthbiBzaXNhbnlhICovIH0pCiAgICApOwogIH0pOwogIHJldHVybiBQcm9taXNlLmFsbChqb2JzKTsKfQoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJpbnN0YWxsIiwgZnVuY3Rpb24gKGV2ZW50KSB7CiAgZXZlbnQud2FpdFVudGlsKAogICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4ocHJlY2FjaGUpLnRoZW4oZnVuY3Rpb24gKCkgeyByZXR1cm4gc2VsZi5za2lwV2FpdGluZygpOyB9KQogICk7Cn0pOwoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJhY3RpdmF0ZSIsIGZ1bmN0aW9uIChldmVudCkgewogIGV2ZW50LndhaXRVbnRpbCgKICAgIGNhY2hlcy5rZXlzKCkudGhlbihmdW5jdGlvbiAoa2V5cykgewogICAgICByZXR1cm4gUHJvbWlzZS5hbGwoa2V5cy5tYXAoZnVuY3Rpb24gKGspIHsKICAgICAgICBpZiAoay5pbmRleE9mKCJsb2ppLWNoZXNzLSIpID09PSAwICYmIGsgIT09IENBQ0hFKSByZXR1cm4gY2FjaGVzLmRlbGV0ZShrKTsKICAgICAgfSkpOwogICAgfSkudGhlbihmdW5jdGlvbiAoKSB7IHJldHVybiBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSkKICApOwp9KTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcigiZmV0Y2giLCBmdW5jdGlvbiAoZXZlbnQpIHsKICB2YXIgcmVxID0gZXZlbnQucmVxdWVzdDsKICBpZiAocmVxLm1ldGhvZCAhPT0gIkdFVCIpIHJldHVybjsKICB2YXIgdXJsOwogIHRyeSB7IHVybCA9IG5ldyBVUkwocmVxLnVybCk7IH0gY2F0Y2ggKGUpIHsgcmV0dXJuOyB9CiAgaWYgKHVybC5vcmlnaW4gIT09IHNlbGYubG9jYXRpb24ub3JpZ2luKSByZXR1cm47CgogIGlmIChyZXEubW9kZSA9PT0gIm5hdmlnYXRlIikgewogICAgLyogSGFsYW1hbjogY2FjaGUgZHVsdSAobGFuZ3N1bmcga2VidWthLCBvZmZsaW5lIHB1biBiaXNhKSwKICAgICAgIGphcmluZ2FuIGphbGFuIGRpIGJlbGFrYW5nIGxheWFyIHVudHVrIG1lbnllZ2Fya2FuIHNpbXBhbmFuLiAqLwogICAgZXZlbnQucmVzcG9uZFdpdGgoCiAgICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICAgIHZhciBuZXQgPSBmZXRjaChyZXEpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgICAgaWYgKHJlcyAmJiByZXMub2spIHsKICAgICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oZnVuY3Rpb24gKGMpIHsgYy5wdXQoUk9PVCArICJpbmRleC5odG1sIiwgY29weSk7IH0pOwogICAgICAgICAgfQogICAgICAgICAgcmV0dXJuIHJlczsKICAgICAgICB9KS5jYXRjaChmdW5jdGlvbiAoKSB7IHJldHVybiBudWxsOyB9KTsKICAgICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICAgIHJldHVybiBuZXQudGhlbihmdW5jdGlvbiAocmVzKSB7CiAgICAgICAgICBpZiAocmVzKSByZXR1cm4gcmVzOwogICAgICAgICAgcmV0dXJuIGNhY2hlcy5tYXRjaChST09UICsgImluZGV4Lmh0bWwiLCB7IGlnbm9yZVNlYXJjaDogdHJ1ZSB9KTsKICAgICAgICB9KTsKICAgICAgfSkKICAgICk7CiAgICByZXR1cm47CiAgfQoKICAvKiBBc2V0IChpa29uLCBtYW5pZmVzdCwgZGxsLik6IGNhY2hlIGR1bHUsIGphcmluZ2FuIGthbGF1IGJlbHVtIGFkYS4gKi8KICBldmVudC5yZXNwb25kV2l0aCgKICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICByZXR1cm4gZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uIChyZXMpIHsKICAgICAgICBpZiAocmVzICYmIHJlcy5vaykgewogICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgIGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uIChjKSB7IGMucHV0KHJlcSwgY29weSk7IH0pOwogICAgICAgIH0KICAgICAgICByZXR1cm4gcmVzOwogICAgICB9KTsKICAgIH0pCiAgKTsKfSk7Cg== — file yang sama, sadar posisi, jadi bisa
+   ditaruh di root situs atau di folder assets). Sebelum mendaftar, isinya
+   dicek dulu beneran file worker, bukan halaman fallback. Sesudah worker
+   aktif, halaman + ikon tersimpan di HP dan pintasan/aplikasi kebuka
+   walau data mati. Semua kegagalan ditelan diam-diam: game tetap jalan
+   seperti biasa, dan cara file Download di kartu offline tetap tersedia. */
+(function () {
+  var statusEl = document.getElementById("pwaStatus");
+  var installBtn = document.getElementById("btnInstall");
+  function say(msg) { if (statusEl) statusEl.textContent = msg; }
+
+  var isFile = !!(window.location && window.location.protocol === "file:");
+  if (isFile) {
+    say("✓ Kamu lagi buka dari file offline — game ini sudah tersimpan di HP dan jalan tanpa data.");
+    if (installBtn) installBtn.classList.add("hidden");
+    return;
+  }
+
+  var swReady = false;
+
+  function sayReady() {
+    swReady = true;
+    say("✓ Game sudah tersimpan di HP — pintasan/aplikasi ini sekarang bisa dibuka walau data mati.");
+  }
+  function sayOffline() {
+    say("Kamu lagi offline — game tetap jalan. Kalau sudah terpasang/tersimpan, pintasannya juga kebuka tanpa data.");
+  }
+
+  window.addEventListener("offline", sayOffline);
+  window.addEventListener("online", function () { if (swReady) sayReady(); });
+
+  /* --- pasang aplikasi --- */
+  window.addEventListener("appinstalled", function () {
+    say("✓ Aplikasi terpasang. Buka dari ikon Loji Chess di layar utama — bisa tanpa data.");
+  });
+  if (installBtn) installBtn.addEventListener("click", function () {
+    if (swReady) { sayReady(); return; }
+    sayManual();
+  });
+  function sayManual() {
+    say("Ketuk menu ⋮ di Chrome, pilih “Instal aplikasi” atau “Tambahkan ke Layar Utama”. Habis itu buka dari ikon di layar utama — bisa tanpa data. Kalau menunya nggak ada, pakai tombol Download File Offline di bawah.");
+  }
+
+  /* --- service worker --- */
+  function watchWorker(worker) {
+    if (!worker) return;
+    try {
+      worker.addEventListener("statechange", function () {
+        if (worker.state === "activated") sayReady();
+      });
+      if (worker.state === "activated") sayReady();
+    } catch (e) {}
+  }
+  function watchRegistration(reg) {
+    if (!reg) return;
+    try {
+      watchWorker(reg.installing);
+      watchWorker(reg.waiting);
+      watchWorker(reg.active);
+      reg.addEventListener("updatefound", function () { watchWorker(reg.installing); });
+    } catch (e) {}
+  }
+  function registerFileWorker() {
+    /* Cek dulu sw.js beneran ada & isinya worker — server yang menjawab
+       dengan halaman HTML (fallback) tidak boleh didaftarkan. */
+    return fetch("sw.js", { credentials: "same-origin" }).then(function (res) {
+      if (!res || !res.ok) return false;
+      return res.text();
+    }).then(function (text) {
+      if (!text || text.indexOf("LOJI_SW") === -1) return false;
+      return navigator.serviceWorker.register("sw.js").then(function (reg) {
+        watchRegistration(reg);
+        return true;
+      });
+    }).catch(function () { return false; });
+  }
+  function arm() {
+    if (!("serviceWorker" in navigator)) return;
+    try {
+      if (navigator.serviceWorker.controller) sayReady();
+      navigator.serviceWorker.addEventListener("controllerchange", sayReady);
+      registerFileWorker();
+    } catch (e) { /* diam saja — game tetap jalan */ }
+  }
+  if (document.readyState === "complete") arm();
+  else window.addEventListener("load", arm);
+  if (!navigator.onLine) sayOffline();
+})();
     </script>
   </body>
 </html>
