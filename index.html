@@ -3153,10 +3153,19 @@ el("btnStart").addEventListener("click", () => {
 /* =====================================================================
    Mode Main Berdua (Wi-Fi / Hotspot) — WebRTC data channel antar 2 HP.
    Aplikasi web tidak bisa memakai API native Wi-Fi Direct / Nearby
-   Connections, jadi sambungan dibuat lewat WebRTC (kandidat host saja,
-   tanpa server STUN/TURN) antar dua HP di Wi-Fi/hotspot yang sama.
-   Pertukaran sinyal (offer/answer) lewat QR yang dipindai bolak-balik;
-   kode sinyal dipecah jadi beberapa QR bergilir karena SDP cukup panjang.
+   Connections, jadi sambungan dibuat lewat WebRTC antar dua HP di
+   Wi-Fi/hotspot yang sama. Pertukaran sinyal (offer/answer) lewat QR
+   yang dipindai bolak-balik. Dua hal yang dulu bikin susah konek dan
+   sekarang diperbaiki:
+   1) SDP yang masuk QR DIPOTONG (lihat compressSdpForQR): dulu seluruh
+      kandidat dari semua antarmuka ikut terkirim → 3–5 QR super-padat
+      yang susah dibaca kamera. Sekarang cukup sampai penanda
+      end-of-candidates pertama → biasanya tinggal 1 QR yang longgar.
+   2) Kegagalan jalur ICE sekarang DILAPORKAN ke pemain (dulu diam
+      saja di "menyambungkan…"), lengkap dengan cara mengatasinya.
+   Sambungan tetap murni lokal: kandidat host saja, tanpa server
+   STUN/TURN — kedua HP di Wi-Fi/hotspot yang sama tidak butuh
+   internet dan tidak ada data yang keluar ke pihak ketiga.
    ===================================================================== */
 let peer = null, dchan = null;
 let scanStream = null, scanRAF = 0, scanDone = null, scanParts = null;
@@ -3181,6 +3190,26 @@ function updateWifiBar() {
 }
 
 /* ---------- pengkodean sinyal ---------- */
+/* SDP dari Chrome membawa SATU blok kandidat per antarmuka jaringan
+   (Wi-Fi, data seluler, IPv6, VPN…), tiap blok diakhiri baris
+   "a=end-of-candidates". WebRTC hanya memakai blok PERTAMA yang cocok —
+   blok sisanya tidak pernah dipakai, tapi dulu ikut terkirim semua ke
+   QR: kode jadi 3–5 QR super-padat bergilir yang kamera HP lawan susah
+   baca (itu biang "susah konek"). Fungsi ini membuang semua baris
+   sesudah end-of-candidates pertama (baris penanda itu sendiri tetap
+   disimpan), jadi QR Undangan/Jawaban biasanya tinggal SATU kode yang
+   jauh lebih longgar. Aman: kedua HP menjalankan kode yang sama, dan
+   SDP hasil potongan tetap SDP yang sah — kandidat blok pertama utuh. */
+function compressSdpForQR(sdp) {
+  if (!sdp) return sdp;
+  const lines = String(sdp).split(/\r?\n/);
+  const out = [];
+  for (const line of lines) {
+    out.push(line);
+    if (line.indexOf("a=end-of-candidates") === 0) break;
+  }
+  return out.join("\r\n") + "\r\n";
+}
 function signalEncode(obj) {
   return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
 }
@@ -3305,16 +3334,41 @@ function stopScan() {
 function waitIce(pc) {
   return new Promise(res => {
     if (pc.iceGatheringState === "complete") return res();
-    const to = setTimeout(res, 3500);
+    // QR tidak boleh terbit sebelum ada minimal satu kandidat di SDP —
+    // QR tanpa kandidat tidak akan pernah nyambung. Tunggu pengumpulan
+    // selesai; kalau 3,5 detik belum selesai tapi kandidat sudah ada,
+    // lanjut saja; batas keras 7 detik supaya pemain tidak menunggu
+    // terlalu lama kalau pengumpulan kandidat menggantung.
+    const deadline = Date.now() + 7000;
+    let timer = setTimeout(check, 3500);
+    function check() {
+      const sdp = (pc.localDescription && pc.localDescription.sdp) || "";
+      if (sdp.indexOf("a=candidate") !== -1 || Date.now() >= deadline || pc.iceGatheringState === "complete") return res();
+      timer = setTimeout(check, 500);
+    }
     pc.addEventListener("icegatheringstatechange", () => {
-      if (pc.iceGatheringState === "complete") { clearTimeout(to); res(); }
+      if (pc.iceGatheringState === "complete") { clearTimeout(timer); res(); }
     });
   });
 }
 function newPeer() {
   closePeer();
+  // Kandidat host saja, tanpa STUN/TURN: main 2 HP ini memang untuk
+  // Wi-Fi/hotspot yang sama dan harus jalan tanpa internet; tidak ada
+  // alamat IP yang dikirim ke server pihak ketiga mana pun.
   const pc = new RTCPeerConnection({ iceServers: [] });
   peer = pc;
+  pc.oniceconnectionstatechange = () => {
+    if (!peer || peer !== pc) return;
+    // Dulu kegagalan di tahap ini tidak bersuara sama sekali: status
+    // berhenti di "menyambungkan…" dan pemain tidak tahu sebabnya.
+    // Sekarang kegagalan jalur ICE dilaporkan apa adanya + obatnya.
+    if (pc.iceConnectionState === "failed" && !wifiConnected) {
+      wifiStatus("Jalur koneksi gagal terbentuk. Pastikan kedua HP di Wi-Fi/hotspot yang SAMA, matikan dulu data seluler di HP yang Gabung, lalu ulangi dari langkah 1 di kedua HP.");
+    } else if (pc.iceConnectionState === "checking" && !wifiConnected) {
+      wifiStatus("Kode diterima — lagi mencari jalur ke HP lawan…");
+    }
+  };
   pc.onconnectionstatechange = () => {
     if (!peer || peer !== pc) return;
     if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
@@ -3371,7 +3425,7 @@ async function hostCreateOffer() {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     await waitIce(pc);
-    showSignalQR({ type: pc.localDescription.type, sdp: pc.localDescription.sdp, hc: hostColor, ul: undoLock ? 1 : 0 },
+    showSignalQR({ type: pc.localDescription.type, sdp: compressSdpForQR(pc.localDescription.sdp), hc: hostColor, ul: undoLock ? 1 : 0 },
       "QR Undangan — tunjukkan ke HP lawan untuk dipindai");
     wifiStatus("QR siap — minta lawan pindai. Kamu pegang " + COLOR_ID[myColor] + ", lawan " + COLOR_ID[-myColor] + ". Lalu pindai QR Jawaban lawan (langkah 2)." + (undoLock ? " Kunci Urungkan menyala — tombol Urungkan mati buat dua HP di game ini." : ""));
   } catch (e) {
@@ -3416,7 +3470,7 @@ async function guestApplyOffer(signalStr) {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     await waitIce(pc);
-    showSignalQR({ type: pc.localDescription.type, sdp: pc.localDescription.sdp, hc: hostColor },
+    showSignalQR({ type: pc.localDescription.type, sdp: compressSdpForQR(pc.localDescription.sdp), hc: hostColor },
       "QR Jawaban — tunjukkan ke Tuan Rumah untuk dipindai balik");
     wifiStatus("QR Jawaban siap — kamu pegang " + COLOR_ID[myColor] + ". Tunjukkan ke Tuan Rumah untuk dipindai.");
     render();
@@ -3682,7 +3736,7 @@ newGame();
     <script>
 /* ---------- offline beneran: service worker + pasang aplikasi ----------
    Halaman ini mendaftarkan sw.js yang tersaji di sebelahnya (sumber
-   worker-nya: data:application/javascript;base64,LyogTE9KSV9TVyDigJQgTG9qaSBDaGVzcyBzZXJ2aWNlIHdvcmtlci4KICAgVHVnYXNueWE6IHBhcyBnYW1lIHBlcnRhbWEgZGlidWthIChpbnRlcm5ldCBueWFsYSksIHNpbXBhbiBoYWxhbWFuICsKICAgaWtvbiBrZSBIUC4gU2VzdWRhaCBpdHUgZ2FtZSBkaXNhamlrYW4gZGFyaSBzaW1wYW5hbiBpdHUsIGphZGkgcGludGFzYW4gLwogICBhcGxpa2FzaSB0ZXRhcCBrZWJ1a2Egd2FsYXUgZGF0YSBtYXRpLgogICBGaWxlIGluaSBiZWtlcmphIGRhcmkgZHVhIHBvc2lzaTogZGkgcm9vdCBzaXR1cyAoc2NvcGUgPSBzZWx1cnVoIHNpdHVzKQogICBhdGF1IGRpIGRhbGFtIGZvbGRlciBhc3NldHMvIChpYSBtZW5naGl0dW5nIHJvb3QgZGFyaSBwb3Npc2lueWEgc2VuZGlyaSkuCiAgIE5haWtrYW4gbm9tb3IgQ0FDSEUgdGlhcCByaWxpcyBzdXBheWEgc2ltcGFuYW4gbGFtYSBkaWdhbnRpLiAqLwp2YXIgQ0FDSEUgPSAibG9qaS1jaGVzcy12MzQiOwp2YXIgU1dfUEFUSCA9IHNlbGYubG9jYXRpb24ucGF0aG5hbWUgfHwgIi8iOwp2YXIgU1dfRElSID0gU1dfUEFUSC5zbGljZSgwLCBTV19QQVRILmxhc3RJbmRleE9mKCIvIikgKyAxKTsKdmFyIElOX0FTU0VUUyA9IFNXX0RJUi5zbGljZShTV19ESVIubGVuZ3RoIC0gOCkgPT09ICIvYXNzZXRzLyI7CnZhciBST09UID0gSU5fQVNTRVRTID8gU1dfRElSLnNsaWNlKDAsIFNXX0RJUi5sZW5ndGggLSA3KSA6IFNXX0RJUjsKdmFyIEFTU0VUUyA9IFJPT1QgKyAiYXNzZXRzLyI7CnZhciBDT1JFID0gWwogIFJPT1QsCiAgUk9PVCArICJpbmRleC5odG1sIiwKICBBU1NFVFMgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIEFTU0VUUyArICJpY29uLTE5Mi5wbmciLAogIEFTU0VUUyArICJpY29uLTUxMi5wbmciLAogIEFTU0VUUyArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgQVNTRVRTICsgImZhdmljb24tMzIucG5nIiwKICBTV19ESVIgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIFNXX0RJUiArICJpY29uLTE5Mi5wbmciLAogIFNXX0RJUiArICJpY29uLTUxMi5wbmciLAogIFNXX0RJUiArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgU1dfRElSICsgImZhdmljb24tMzIucG5nIgpdOwoKZnVuY3Rpb24gcHJlY2FjaGUoY2FjaGUpIHsKICB2YXIgc2VlbiA9IHt9OwogIHZhciBqb2JzID0gW107CiAgQ09SRS5mb3JFYWNoKGZ1bmN0aW9uICh1KSB7CiAgICBpZiAoc2Vlblt1XSkgcmV0dXJuOwogICAgc2Vlblt1XSA9IHRydWU7CiAgICBqb2JzLnB1c2goCiAgICAgIGZldGNoKHUpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgIGlmIChyZXMgJiYgcmVzLm9rKSByZXR1cm4gY2FjaGUucHV0KHUsIHJlcyk7CiAgICAgIH0pLmNhdGNoKGZ1bmN0aW9uICgpIHsgLyogc2F0dSBmaWxlIGdhZ2FsIHRpZGFrIG1lbmdnYWdhbGthbiBzaXNhbnlhICovIH0pCiAgICApOwogIH0pOwogIHJldHVybiBQcm9taXNlLmFsbChqb2JzKTsKfQoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJpbnN0YWxsIiwgZnVuY3Rpb24gKGV2ZW50KSB7CiAgZXZlbnQud2FpdFVudGlsKAogICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4ocHJlY2FjaGUpLnRoZW4oZnVuY3Rpb24gKCkgeyByZXR1cm4gc2VsZi5za2lwV2FpdGluZygpOyB9KQogICk7Cn0pOwoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJhY3RpdmF0ZSIsIGZ1bmN0aW9uIChldmVudCkgewogIGV2ZW50LndhaXRVbnRpbCgKICAgIGNhY2hlcy5rZXlzKCkudGhlbihmdW5jdGlvbiAoa2V5cykgewogICAgICByZXR1cm4gUHJvbWlzZS5hbGwoa2V5cy5tYXAoZnVuY3Rpb24gKGspIHsKICAgICAgICBpZiAoay5pbmRleE9mKCJsb2ppLWNoZXNzLSIpID09PSAwICYmIGsgIT09IENBQ0hFKSByZXR1cm4gY2FjaGVzLmRlbGV0ZShrKTsKICAgICAgfSkpOwogICAgfSkudGhlbihmdW5jdGlvbiAoKSB7IHJldHVybiBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSkKICApOwp9KTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcigiZmV0Y2giLCBmdW5jdGlvbiAoZXZlbnQpIHsKICB2YXIgcmVxID0gZXZlbnQucmVxdWVzdDsKICBpZiAocmVxLm1ldGhvZCAhPT0gIkdFVCIpIHJldHVybjsKICB2YXIgdXJsOwogIHRyeSB7IHVybCA9IG5ldyBVUkwocmVxLnVybCk7IH0gY2F0Y2ggKGUpIHsgcmV0dXJuOyB9CiAgaWYgKHVybC5vcmlnaW4gIT09IHNlbGYubG9jYXRpb24ub3JpZ2luKSByZXR1cm47CgogIGlmIChyZXEubW9kZSA9PT0gIm5hdmlnYXRlIikgewogICAgLyogSGFsYW1hbjogY2FjaGUgZHVsdSAobGFuZ3N1bmcga2VidWthLCBvZmZsaW5lIHB1biBiaXNhKSwKICAgICAgIGphcmluZ2FuIGphbGFuIGRpIGJlbGFrYW5nIGxheWFyIHVudHVrIG1lbnllZ2Fya2FuIHNpbXBhbmFuLiAqLwogICAgZXZlbnQucmVzcG9uZFdpdGgoCiAgICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICAgIHZhciBuZXQgPSBmZXRjaChyZXEpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgICAgaWYgKHJlcyAmJiByZXMub2spIHsKICAgICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oZnVuY3Rpb24gKGMpIHsgYy5wdXQoUk9PVCArICJpbmRleC5odG1sIiwgY29weSk7IH0pOwogICAgICAgICAgfQogICAgICAgICAgcmV0dXJuIHJlczsKICAgICAgICB9KS5jYXRjaChmdW5jdGlvbiAoKSB7IHJldHVybiBudWxsOyB9KTsKICAgICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICAgIHJldHVybiBuZXQudGhlbihmdW5jdGlvbiAocmVzKSB7CiAgICAgICAgICBpZiAocmVzKSByZXR1cm4gcmVzOwogICAgICAgICAgcmV0dXJuIGNhY2hlcy5tYXRjaChST09UICsgImluZGV4Lmh0bWwiLCB7IGlnbm9yZVNlYXJjaDogdHJ1ZSB9KTsKICAgICAgICB9KTsKICAgICAgfSkKICAgICk7CiAgICByZXR1cm47CiAgfQoKICAvKiBBc2V0IChpa29uLCBtYW5pZmVzdCwgZGxsLik6IGNhY2hlIGR1bHUsIGphcmluZ2FuIGthbGF1IGJlbHVtIGFkYS4gKi8KICBldmVudC5yZXNwb25kV2l0aCgKICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICByZXR1cm4gZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uIChyZXMpIHsKICAgICAgICBpZiAocmVzICYmIHJlcy5vaykgewogICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgIGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uIChjKSB7IGMucHV0KHJlcSwgY29weSk7IH0pOwogICAgICAgIH0KICAgICAgICByZXR1cm4gcmVzOwogICAgICB9KTsKICAgIH0pCiAgKTsKfSk7Cg== — file yang sama, sadar posisi, jadi bisa
+   worker-nya: data:application/javascript;base64,LyogTE9KSV9TVyDigJQgTG9qaSBDaGVzcyBzZXJ2aWNlIHdvcmtlci4KICAgVHVnYXNueWE6IHBhcyBnYW1lIHBlcnRhbWEgZGlidWthIChpbnRlcm5ldCBueWFsYSksIHNpbXBhbiBoYWxhbWFuICsKICAgaWtvbiBrZSBIUC4gU2VzdWRhaCBpdHUgZ2FtZSBkaXNhamlrYW4gZGFyaSBzaW1wYW5hbiBpdHUsIGphZGkgcGludGFzYW4gLwogICBhcGxpa2FzaSB0ZXRhcCBrZWJ1a2Egd2FsYXUgZGF0YSBtYXRpLgogICBGaWxlIGluaSBiZWtlcmphIGRhcmkgZHVhIHBvc2lzaTogZGkgcm9vdCBzaXR1cyAoc2NvcGUgPSBzZWx1cnVoIHNpdHVzKQogICBhdGF1IGRpIGRhbGFtIGZvbGRlciBhc3NldHMvIChpYSBtZW5naGl0dW5nIHJvb3QgZGFyaSBwb3Npc2lueWEgc2VuZGlyaSkuCiAgIE5haWtrYW4gbm9tb3IgQ0FDSEUgdGlhcCByaWxpcyBzdXBheWEgc2ltcGFuYW4gbGFtYSBkaWdhbnRpLiAqLwp2YXIgQ0FDSEUgPSAibG9qaS1jaGVzcy12MzUiOwp2YXIgU1dfUEFUSCA9IHNlbGYubG9jYXRpb24ucGF0aG5hbWUgfHwgIi8iOwp2YXIgU1dfRElSID0gU1dfUEFUSC5zbGljZSgwLCBTV19QQVRILmxhc3RJbmRleE9mKCIvIikgKyAxKTsKdmFyIElOX0FTU0VUUyA9IFNXX0RJUi5zbGljZShTV19ESVIubGVuZ3RoIC0gOCkgPT09ICIvYXNzZXRzLyI7CnZhciBST09UID0gSU5fQVNTRVRTID8gU1dfRElSLnNsaWNlKDAsIFNXX0RJUi5sZW5ndGggLSA3KSA6IFNXX0RJUjsKdmFyIEFTU0VUUyA9IFJPT1QgKyAiYXNzZXRzLyI7CnZhciBDT1JFID0gWwogIFJPT1QsCiAgUk9PVCArICJpbmRleC5odG1sIiwKICBBU1NFVFMgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIEFTU0VUUyArICJpY29uLTE5Mi5wbmciLAogIEFTU0VUUyArICJpY29uLTUxMi5wbmciLAogIEFTU0VUUyArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgQVNTRVRTICsgImZhdmljb24tMzIucG5nIiwKICBTV19ESVIgKyAibWFuaWZlc3Qud2VibWFuaWZlc3QiLAogIFNXX0RJUiArICJpY29uLTE5Mi5wbmciLAogIFNXX0RJUiArICJpY29uLTUxMi5wbmciLAogIFNXX0RJUiArICJhcHBsZS10b3VjaC1pY29uLnBuZyIsCiAgU1dfRElSICsgImZhdmljb24tMzIucG5nIgpdOwoKZnVuY3Rpb24gcHJlY2FjaGUoY2FjaGUpIHsKICB2YXIgc2VlbiA9IHt9OwogIHZhciBqb2JzID0gW107CiAgQ09SRS5mb3JFYWNoKGZ1bmN0aW9uICh1KSB7CiAgICBpZiAoc2Vlblt1XSkgcmV0dXJuOwogICAgc2Vlblt1XSA9IHRydWU7CiAgICBqb2JzLnB1c2goCiAgICAgIGZldGNoKHUpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgIGlmIChyZXMgJiYgcmVzLm9rKSByZXR1cm4gY2FjaGUucHV0KHUsIHJlcyk7CiAgICAgIH0pLmNhdGNoKGZ1bmN0aW9uICgpIHsgLyogc2F0dSBmaWxlIGdhZ2FsIHRpZGFrIG1lbmdnYWdhbGthbiBzaXNhbnlhICovIH0pCiAgICApOwogIH0pOwogIHJldHVybiBQcm9taXNlLmFsbChqb2JzKTsKfQoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJpbnN0YWxsIiwgZnVuY3Rpb24gKGV2ZW50KSB7CiAgZXZlbnQud2FpdFVudGlsKAogICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4ocHJlY2FjaGUpLnRoZW4oZnVuY3Rpb24gKCkgeyByZXR1cm4gc2VsZi5za2lwV2FpdGluZygpOyB9KQogICk7Cn0pOwoKc2VsZi5hZGRFdmVudExpc3RlbmVyKCJhY3RpdmF0ZSIsIGZ1bmN0aW9uIChldmVudCkgewogIGV2ZW50LndhaXRVbnRpbCgKICAgIGNhY2hlcy5rZXlzKCkudGhlbihmdW5jdGlvbiAoa2V5cykgewogICAgICByZXR1cm4gUHJvbWlzZS5hbGwoa2V5cy5tYXAoZnVuY3Rpb24gKGspIHsKICAgICAgICBpZiAoay5pbmRleE9mKCJsb2ppLWNoZXNzLSIpID09PSAwICYmIGsgIT09IENBQ0hFKSByZXR1cm4gY2FjaGVzLmRlbGV0ZShrKTsKICAgICAgfSkpOwogICAgfSkudGhlbihmdW5jdGlvbiAoKSB7IHJldHVybiBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSkKICApOwp9KTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcigiZmV0Y2giLCBmdW5jdGlvbiAoZXZlbnQpIHsKICB2YXIgcmVxID0gZXZlbnQucmVxdWVzdDsKICBpZiAocmVxLm1ldGhvZCAhPT0gIkdFVCIpIHJldHVybjsKICB2YXIgdXJsOwogIHRyeSB7IHVybCA9IG5ldyBVUkwocmVxLnVybCk7IH0gY2F0Y2ggKGUpIHsgcmV0dXJuOyB9CiAgaWYgKHVybC5vcmlnaW4gIT09IHNlbGYubG9jYXRpb24ub3JpZ2luKSByZXR1cm47CgogIGlmIChyZXEubW9kZSA9PT0gIm5hdmlnYXRlIikgewogICAgLyogSGFsYW1hbjogY2FjaGUgZHVsdSAobGFuZ3N1bmcga2VidWthLCBvZmZsaW5lIHB1biBiaXNhKSwKICAgICAgIGphcmluZ2FuIGphbGFuIGRpIGJlbGFrYW5nIGxheWFyIHVudHVrIG1lbnllZ2Fya2FuIHNpbXBhbmFuLiAqLwogICAgZXZlbnQucmVzcG9uZFdpdGgoCiAgICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICAgIHZhciBuZXQgPSBmZXRjaChyZXEpLnRoZW4oZnVuY3Rpb24gKHJlcykgewogICAgICAgICAgaWYgKHJlcyAmJiByZXMub2spIHsKICAgICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgICAgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oZnVuY3Rpb24gKGMpIHsgYy5wdXQoUk9PVCArICJpbmRleC5odG1sIiwgY29weSk7IH0pOwogICAgICAgICAgfQogICAgICAgICAgcmV0dXJuIHJlczsKICAgICAgICB9KS5jYXRjaChmdW5jdGlvbiAoKSB7IHJldHVybiBudWxsOyB9KTsKICAgICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICAgIHJldHVybiBuZXQudGhlbihmdW5jdGlvbiAocmVzKSB7CiAgICAgICAgICBpZiAocmVzKSByZXR1cm4gcmVzOwogICAgICAgICAgcmV0dXJuIGNhY2hlcy5tYXRjaChST09UICsgImluZGV4Lmh0bWwiLCB7IGlnbm9yZVNlYXJjaDogdHJ1ZSB9KTsKICAgICAgICB9KTsKICAgICAgfSkKICAgICk7CiAgICByZXR1cm47CiAgfQoKICAvKiBBc2V0IChpa29uLCBtYW5pZmVzdCwgZGxsLik6IGNhY2hlIGR1bHUsIGphcmluZ2FuIGthbGF1IGJlbHVtIGFkYS4gKi8KICBldmVudC5yZXNwb25kV2l0aCgKICAgIGNhY2hlcy5tYXRjaChyZXEsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4oZnVuY3Rpb24gKGhpdCkgewogICAgICBpZiAoaGl0KSByZXR1cm4gaGl0OwogICAgICByZXR1cm4gZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uIChyZXMpIHsKICAgICAgICBpZiAocmVzICYmIHJlcy5vaykgewogICAgICAgICAgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsKICAgICAgICAgIGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uIChjKSB7IGMucHV0KHJlcSwgY29weSk7IH0pOwogICAgICAgIH0KICAgICAgICByZXR1cm4gcmVzOwogICAgICB9KTsKICAgIH0pCiAgKTsKfSk7Cg== — file yang sama, sadar posisi, jadi bisa
    ditaruh di root situs atau di folder assets). Sebelum mendaftar, isinya
    dicek dulu beneran file worker, bukan halaman fallback. Sesudah worker
    aktif, halaman + ikon tersimpan di HP dan pintasan/aplikasi kebuka
