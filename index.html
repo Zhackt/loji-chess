@@ -856,7 +856,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       <div class="controls">
         <button type="button" class="btn primary" id="btnNew">Arena Loji</button>
         <button type="button" class="btn" id="btnFocus">⛶ Layar Penuh</button>
-        <button type="button" class="btn" id="btnOffline">⬇ Simpan Offline</button>
         <button type="button" class="btn" id="btnUndo">Urungkan</button>
         <button type="button" class="btn" id="btnFlip">Balik Papan</button>
         <button type="button" class="btn hidden" id="btnLock" aria-pressed="true">Kunci Papan</button>
@@ -924,15 +923,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
       <section class="offline-card" id="offlineCard">
         <h2>Main Offline — Tanpa Data</h2>
-        <p>Pasang game ini jadi aplikasi di HP-mu, biar bisa main pas data mati: habis terpasang, game tersimpan di HP dan pintasannya kebuka dari layar utama tanpa internet — di hutan nggak ada sinyal pun bisa. Lihat garis status di bawah tombol Pasang: ada tanda ✓ kalau simpanannya sudah siap. Kalau pemasangan nggak tersedia di browser-mu, cara file di bawah ini selalu jalan tanpa data.</p>
         <button type="button" class="btn primary" id="btnInstall">📲 Pasang Aplikasi</button>
         <p class="offline-status" id="pwaStatus" role="status"></p>
-        <p>Tombol Pasang nggak jalan? Pakai cara file — sekali download, tersimpan di folder Download:</p>
-        <ol>
-          <li>Ketuk tombol Download di bawah — file <strong>loji-chess.html</strong> tersimpan di folder Download.</li>
-          <li>Buka aplikasi File, masuk ke folder Download.</li>
-          <li>Ketuk file <strong>loji-chess.html</strong> — game langsung jalan, tanpa data sama sekali.</li>
-        </ol>
         <button type="button" class="btn" id="btnOfflineCard">⬇ Download File Offline</button>
         <p class="offline-status" id="offlineStatus" role="status"></p>
       </section>
@@ -3405,7 +3397,6 @@ function saveOfflineFile() {
     status.textContent = "Gagal menyiapkan file. Coba lagi pas internet lagi nyala.";
   }).then(() => { offlineBusy = false; });
 }
-el("btnOffline").addEventListener("click", saveOfflineFile);
 el("btnOfflineCard").addEventListener("click", saveOfflineFile);
 
 /* ---------- mulai ---------- */
