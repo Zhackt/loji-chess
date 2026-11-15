@@ -5,7 +5,7 @@
    File ini bekerja dari dua posisi: di root situs (scope = seluruh situs)
    atau di dalam folder assets/ (ia menghitung root dari posisinya sendiri).
    Naikkan nomor CACHE tiap rilis supaya simpanan lama diganti. */
-var CACHE = "loji-chess-v32";
+var CACHE = "loji-chess-v33";
 var SW_PATH = self.location.pathname || "/";
 var SW_DIR = SW_PATH.slice(0, SW_PATH.lastIndexOf("/") + 1);
 var IN_ASSETS = SW_DIR.slice(SW_DIR.length - 8) === "/assets/";
